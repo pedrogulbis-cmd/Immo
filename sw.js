@@ -1,7 +1,7 @@
 /* Rendement — service worker (même principe que Baby Name).
    S'installe tout de suite : l'app devient installable dès la première visite
    et reste disponible hors ligne. Incrémenter CACHE à chaque mise en ligne. */
-const CACHE = "rendement-1";
+const CACHE = "rendement-2";
 const BASE = ["./", "./index.html",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png",
   "./icons/apple-touch-icon.png", "./icons/favicon-32.png", "./icons/favicon-64.png"];

@@ -161,9 +161,14 @@ details.pli[open] summary::before{content:"▾ "}
 .lig{display:flex;align-items:center;gap:12px;justify-content:space-between}
 .lig .l{flex:1}
 .lig .d{font-size:12px;color:var(--gris);margin-top:2px;line-height:1.45}
-.marche td input{width:100%;border:1px solid var(--ligne);background:var(--carte2);border-radius:8px;padding:6px 8px;font-size:14px}
-.marche td{padding:3px 3px}
-.marche th{font-size:11px;color:var(--gris);font-weight:500;text-align:left;padding:0 3px}
+.ajout{display:flex;gap:8px;align-items:center}
+.ajout .champ{flex:1}
+.ville-m{border-top:1px solid var(--ligne);margin-top:12px;padding-top:10px}
+.ville-m .lig .btn.lien{font-size:17px;padding:4px 8px}
+.champs.c4{grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.champs.c4 input{padding:7px 8px;font-size:14px}
+.champs.c4 label{font-size:11px}
+@media (max-width:520px){ .champs.c4{grid-template-columns:1fr 1fr} }
 .code{font-family:var(--mono);font-size:11px;word-break:break-all;background:var(--carte2);border-radius:8px;padding:8px;max-height:80px;overflow:auto;color:var(--gris)}
 a.favori{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
 [data-theme="sombre"] a.favori{color:#06120d}
@@ -206,9 +211,16 @@ ol.etapes b{color:var(--texte);font-weight:600}
 
 <script>
 "use strict";
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const SCHEMA = 1;
 const JOURNAL = [
+  { v:"1.1.0", d:"2026-10-23", t:"Marché automatique", l:[
+    "Les prix et loyers au m² d'une ville se chargent tout seuls : il suffit de taper son nom.",
+    "Prix : ventes réelles des 12 derniers mois (DVF, data.gouv.fr). Loyers : Carte des loyers 2025 du ministère du Logement.",
+    "Valeurs séparées appartement / maison, utilisées selon le type du bien.",
+    "Une annonce d'une nouvelle ville ajoute automatiquement sa référence marché.",
+    "Les références se mettent à jour d'elles-mêmes tous les 30 jours (sauf celles que tu as modifiées à la main)."
+  ]},
   { v:"1.0.0", d:"2026-10-22", t:"Première version", l:[
     "Reprise du fichier Excel : les 8 biens sont importés au premier lancement.",
     "Calcul corrigé : frais de notaire (8 % dans l'ancien, Rhône), travaux et mobilier inclus dans le coût total.",
@@ -238,12 +250,12 @@ const store = {
 };
 
 /* ---------------- paramètres ---------------- */
-/* Références marché : RealAdvisor, octobre 2026 (médianes appartements,
-   loyer annuel au m² ÷ 12). À ajuster avec tes propres relevés. */
+/* Références marché. Valeurs de départ (RealAdvisor, octobre 2026) remplacées
+   dès la première connexion par les données publiques (voir « marché » plus bas). */
 const MARCHE_DEFAUT = [
-  { ville:"Villefranche-sur-Saône", cp:"69400", prixM2:2566, loyerM2:14.4, src:"RealAdvisor oct. 2026" },
-  { ville:"Gleizé", cp:"69400", prixM2:2994, loyerM2:14.1, src:"RealAdvisor oct. 2026" },
-  { ville:"Dardilly", cp:"69570", prixM2:4662, loyerM2:21.2, src:"RealAdvisor oct. 2026" }
+  { ville:"Villefranche-sur-Saône", cp:"69400", insee:"69264", prixM2:2566, loyerM2:14.4, src:"RealAdvisor oct. 2026" },
+  { ville:"Gleizé", cp:"69400", insee:"69092", prixM2:2994, loyerM2:14.1, src:"RealAdvisor oct. 2026" },
+  { ville:"Dardilly", cp:"69570", insee:"69072", prixM2:4662, loyerM2:21.2, src:"RealAdvisor oct. 2026" }
 ];
 const P_DEFAUT = {
   objectif:10, base:"brute",
@@ -255,6 +267,114 @@ const P_DEFAUT = {
 let P = Object.assign({}, P_DEFAUT, store.get("params", {}));
 if(!Array.isArray(P.marche)) P.marche = MARCHE_DEFAUT.slice();
 const sauverP = () => store.set("params", P);
+
+/* ---------------- marché : données publiques ----------------
+   Commune : geo.api.gouv.fr. Prix au m² : DVF (ventes notariées), statistiques
+   mensuelles Etalab, 12 derniers mois disponibles (repli : 5 ans). Loyers :
+   « Carte des loyers 2025 », ministère du Logement / ANIL (loyers d'annonce,
+   charges comprises). Tout passe par l'API tabulaire de data.gouv.fr, qui
+   accepte les appels directs depuis une page web. */
+const API_T = "https://tabular-api.data.gouv.fr/api/resources/";
+const RES = { mois:"03fba98d-885b-43c0-8986-d299cabc29da", total:"851d342f-9c96-41c1-924a-11a7a7aae8a6",
+  loyApp:"55b34088-0964-415f-9df7-d87dd98a09be", loyMai:"129f764d-b613-44e4-952c-5ff50a8c9b73" };
+const marcheEnCours = new Set();
+const estPerso = m => m.perso || m.src === "perso";
+function jget(u, ms = 15000){
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  return fetch(u, { signal:c.signal }).then(r => { clearTimeout(t); if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+}
+async function chercherCommunes(nom, cp, limite = 6){
+  const f = "&fields=nom,code,codesPostaux,population&boost=population&limit=" + limite;
+  const G = "https://geo.api.gouv.fr/communes?";
+  let l = [];
+  if(nom) l = await jget(G + "nom=" + encodeURIComponent(nom) + (cp ? "&codePostal=" + cp : "") + f);
+  if(!l.length && nom && cp) l = await jget(G + "nom=" + encodeURIComponent(nom) + f);
+  if(!l.length && /^\d{5}$/.test(cp || "")) l = await jget(G + "codePostal=" + cp + f);
+  return l;
+}
+async function donneesMarche(code){
+  const q = (r, champ) => API_T + r + "/data/?" + champ + "__exact=" + code;
+  const rep = await Promise.allSettled([
+    jget(q(RES.mois, "code_geo") + "&annee_mois__sort=desc&page_size=24"),
+    jget(q(RES.total, "code_geo")),
+    jget(q(RES.loyApp, "INSEE_C")),
+    jget(q(RES.loyMai, "INSEE_C"))]);
+  if(rep.every(x => x.status === "rejected")) throw new Error("réseau");
+  const rows = x => x.status === "fulfilled" && x.value && Array.isArray(x.value.data) ? x.value.data : [];
+  const mois = rows(rep[0]).filter(r => !r.echelle_geo || r.echelle_geo === "commune");
+  const tot = rows(rep[1]).find(r => !r.echelle_geo || r.echelle_geo === "commune");
+  const prix = type => {
+    // médianes mensuelles des 12 derniers mois, pondérées par le nombre de ventes
+    const mm = mois.slice(0, 12); let n = 0, s = 0;
+    for(const r of mm){ const k = +r["nb_ventes_" + type] || 0, v = +r["med_prix_m2_" + type]; if(k && v){ n += k; s += k * v; } }
+    if(n >= 10) return { v:Math.round(s / n), n, per:"12 mois", fin:mm[0].annee_mois };
+    if(tot && +tot["nb_ventes_whole_" + type] >= 5 && +tot["med_prix_m2_whole_" + type]) return { v:+tot["med_prix_m2_whole_" + type], n:+tot["nb_ventes_whole_" + type], per:"5 ans" };
+    return null;
+  };
+  const loy = x => { const r = rows(x)[0]; return r && +r.loypredm2 ? Math.round(+r.loypredm2 * 10) / 10 : null; };
+  const pa = prix("appartement"), pm = prix("maison"), la = loy(rep[2]), lm = loy(rep[3]);
+  if(!pa && !pm && !la && !lm) return null;
+  const p0 = pa || pm;
+  return { prixM2: p0 ? p0.v : null, prixM2Maison: pm ? pm.v : null, loyerM2: la || lm, loyerM2Maison: lm,
+    nbApp: pa ? pa.n : 0, nbMai: pm ? pm.n : 0,
+    src: "DVF " + (p0 ? p0.per + (p0.fin ? " (→ " + p0.fin + ")" : "") : "indisponible") + " · Carte des loyers 2025", date: Date.now() };
+}
+/* trouve la commune, charge ses données et crée ou met à jour sa ligne dans P.marche */
+async function chargerVille(nom, cp){
+  const cle = norm(nom) || cp;
+  if(!cle || marcheEnCours.has(cle)) return null;
+  marcheEnCours.add(cle);
+  try {
+    const l = await chercherCommunes(nom, cp);
+    if(!l.length) return { introuvable:true };
+    const n = norm(nom);
+    const c = l.find(x => norm(x.nom) === n) || l.find(x => n && (norm(x.nom).startsWith(n) || n.startsWith(norm(x.nom)))) || l[0];
+    const d = await donneesMarche(c.code);
+    if(!d) return { commune:c, vide:true };
+    let m = P.marche.find(x => x.insee === c.code) || P.marche.find(x => norm(x.ville) === norm(c.nom));
+    if(!m){ m = {}; P.marche.push(m); }
+    Object.assign(m, { ville:c.nom, cp: cp && (c.codesPostaux || []).includes(cp) ? cp : ((c.codesPostaux || [])[0] || ""), insee:c.code }, d);
+    delete m.perso;
+    sauverP();
+    return m;
+  } finally { marcheEnCours.delete(cle); }
+}
+function apresMarche(){
+  if(vue === "biens") rendreBiens();
+  else if(vue === "analyse") rendreResultats();
+  else if(vue === "reglages"){ const a = document.activeElement; if(!(a && a.closest && a.closest("#v-reglages") && a.tagName === "INPUT")) rendreReglages(); }
+}
+/* un bien dont la ville n'a pas de référence : on va la chercher */
+async function assurerMarche(b){
+  if(!b || !b.ville || refMarche(b) || !navigator.onLine) return;
+  const p = chargerVille(b.ville, b.cp).catch(() => null);
+  apresMarche();
+  await p;
+  apresMarche();
+}
+let _amT = null;
+const assurerMarcheDiffere = b => { clearTimeout(_amT); _amT = setTimeout(() => assurerMarche(b), 900); };
+async function rafraichirMarche(force){
+  if(!navigator.onLine) return 0;
+  let k = 0;
+  for(const m of P.marche.slice()){
+    if(!m.ville) continue;
+    if(!force && (estPerso(m) || (m.date && Date.now() - m.date < 30 * 864e5))) continue;
+    const r = await chargerVille(m.ville, m.cp).catch(() => null);
+    if(r && !r.introuvable && !r.vide) k++;
+  }
+  // puis les villes des biens qui n'ont pas encore de référence
+  const vus = new Set();
+  for(const b of biens){
+    const c = norm(b.ville);
+    if(!c || vus.has(c) || refMarche(b)) continue;
+    vus.add(c);
+    const r = await chargerVille(b.ville, b.cp).catch(() => null);
+    if(r && !r.introuvable && !r.vide) k++;
+  }
+  if(k) apresMarche();
+  return k;
+}
 
 /* ---------------- biens ---------------- */
 /* Les 8 biens du fichier Calcul_rendement_immo.xlsx. Les biens 1 à 3 avaient un
@@ -304,7 +424,10 @@ function calc(b){
   o.ref = refMarche(b);
   // les petites surfaces se louent plus cher au m², les grandes moins cher
   o.coefS = P.ajusterSurface && s ? clamp(Math.pow(45 / s, 0.2), 0.8, 1.25) : 1;
-  o.loyerMarche = o.ref && s ? o.ref.loyerM2 * s * o.coefS * (b.meuble ? 1.1 : 1) : null;
+  const maison = b.type === "maison";
+  o.loyerM2Ref = o.ref ? (maison && o.ref.loyerM2Maison ? o.ref.loyerM2Maison : o.ref.loyerM2) : null;
+  o.prixM2Ref = o.ref ? (maison && o.ref.prixM2Maison ? o.ref.prixM2Maison : o.ref.prixM2) : null;
+  o.loyerMarche = o.loyerM2Ref && s ? o.loyerM2Ref * s * o.coefS * (b.meuble ? 1.1 : 1) : null;
   o.loyerEstime = b.loyer == null || b.loyer === "";
   o.loyer = !o.loyerEstime ? +b.loyer : (o.loyerMarche || 0);
   o.notairePct = b.neuf ? 2.5 : +P.notaire;
@@ -357,7 +480,7 @@ function calc(b){
   o.cfNet = o.cf - o.impot / 12;
   // marché
   o.prixM2 = s ? prix / s : 0;
-  o.ecartPrix = o.ref && o.ref.prixM2 && s ? o.prixM2 / o.ref.prixM2 - 1 : null;
+  o.ecartPrix = o.prixM2Ref && s ? o.prixM2 / o.prixM2Ref - 1 : null;
   o.ratioLoyer = (!o.loyerEstime && o.loyerMarche) ? o.loyer / o.loyerMarche : null;
   // prix d'achat maximal (frais de notaire, travaux, mobilier compris) pour un rendement visé
   const rev = P.base === "nette" ? o.revenuNet : o.loyerAn;
@@ -394,9 +517,9 @@ function alertes(b, o){
   else if(b.dpe === "F") a.push([M, "DPE F : interdit à la location pour tout nouveau bail à partir du 1er janvier 2028. Prévois les travaux."]);
   else if(b.dpe === "E") a.push([M, "DPE E : interdit à la location à partir du 1er janvier 2034."]);
   else if(!b.dpe) a.push([I, "DPE inconnu : à demander (compté comme neutre dans le score)."]);
-  if(o.loyerEstime) a.push([M, o.ref ? "Loyer estimé d'après le marché (" + fmtN(o.ref.loyerM2, 1) + " €/m²" + (o.coefS !== 1 ? ", ajusté à la surface" : "") + ") : vérifie avec des annonces de location comparables." : "Pas de loyer : saisis-le, ou ajoute la ville dans Réglages → Marché pour l'estimer."]);
+  if(o.loyerEstime) a.push([M, o.loyerM2Ref ? "Loyer estimé d'après le marché (" + fmtN(o.loyerM2Ref, 1) + " €/m²" + (o.coefS !== 1 ? ", ajusté à la surface" : "") + ") : vérifie avec des annonces de location comparables." : "Pas de loyer : saisis-le, ou ajoute la ville dans Réglages → Marché pour l'estimer."]);
   else if(o.ratioLoyer && o.ratioLoyer > 1.15) a.push([M, "Loyer saisi " + pct(o.ratioLoyer - 1, 0) + " au-dessus du marché estimé (" + eur(o.loyerMarche) + ") : risque de vacance ou de surestimation."]);
-  if(!o.ref) a.push([I, "Pas de référence marché pour « " + (b.ville || "ville inconnue") + " » : ajoute-la dans Réglages → Marché."]);
+  if(!o.ref) a.push([I, b.ville ? (marcheEnCours.has(norm(b.ville)) ? "Chargement des prix et loyers de « " + b.ville + " »…" : "Pas de référence marché pour « " + b.ville + " » (hors ligne ou commune introuvable) : vérifie l'orthographe ou ajoute-la dans Réglages → Marché.") : "Indique la ville pour comparer au marché."]);
   if(o.tfEst || (o.coproEst && b.type !== "maison")) a.push([I, "Estimé faute d'info : " + [o.tfEst ? "taxe foncière (≈ 1 mois de loyer)" : "", o.coproEst && b.type !== "maison" ? "charges de copro (≈ 30 €/m²/an)" : ""].filter(Boolean).join(", ") + ". À demander au vendeur."]);
   if(o.ecartPrix != null && o.ecartPrix < -0.25) a.push([M, "Prix " + pct(-o.ecartPrix, 0) + " sous le marché : cherche pourquoi (travaux, copro en difficulté, rez-de-chaussée, bruit, bien occupé…)."]);
   if(o.ecartPrix != null && o.ecartPrix > 0.10) a.push([M, "Prix " + pct(o.ecartPrix, 0) + " au-dessus du marché du secteur."]);
@@ -541,6 +664,7 @@ function integrer(f, origine){
   sauverB();
   courant = b.id; store.set("courant", courant);
   derniereLecture = { trouves, manquants: ESSENTIELS.filter(k => !trouves.includes(k) && (b[k] == null || b[k] === "")), nouveau, origine, url:b.url };
+  setTimeout(() => assurerMarche(b), 0);
   return b;
 }
 let derniereLecture = null;
@@ -717,6 +841,7 @@ function rendreAnalyse(){
       if((k === "travaux" || k === "mobilier") && v == null) b[k] = 0;
       sauverB();
       rendreResultats();
+      if(k === "ville" || k === "cp") assurerMarcheDiffere(b);
     });
   });
 }
@@ -756,7 +881,7 @@ function rendreResultats(){
       ligne("Prix affiché", eur(b.prix)) + ligne("Frais de notaire (" + fmtN(o.notairePct, 1) + " %)", eur(o.frais)) +
       (o.travaux ? ligne("Travaux", eur(o.travaux)) : "") + (o.mobilier ? ligne("Mobilier", eur(o.mobilier)) : "") +
       ligne("Coût total", eur(o.cout), true) +
-      ligne("Prix au m²", eur(o.prixM2) + (o.ref ? ' <span class="est">marché ' + eur(o.ref.prixM2) + ' (' + (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + ')</span>' : "")) +
+      ligne("Prix au m²", eur(o.prixM2) + (o.prixM2Ref ? ' <span class="est">marché ' + eur(o.prixM2Ref) + ' (' + (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + ')</span>' : "")) +
     '</table></details>' +
     '<details class="pli" open><summary>Revenus et charges par an</summary><table class="t">' +
       ligne("Loyer " + eur(o.loyer) + " × 12" + est(o.loyerEstime), eur(o.loyerAn)) +
@@ -829,10 +954,21 @@ function rendreReglages(){
     }).join("");
     h += '</div></div>';
   });
-  h += '<h2>Marché par ville</h2><div class="carte"><table class="marche" style="width:100%"><tr><th>Ville</th><th style="width:22%">Prix €/m²</th><th style="width:22%">Loyer €/m²/mois</th><th style="width:30px"></th></tr>' +
-    P.marche.map((m, i) => '<tr><td><input data-m="' + i + '" data-f="ville" value="' + esc(m.ville) + '"></td><td><input inputmode="decimal" data-m="' + i + '" data-f="prixM2" value="' + esc(m.prixM2) + '"></td><td><input inputmode="decimal" data-m="' + i + '" data-f="loyerM2" value="' + esc(String(m.loyerM2).replace(".", ",")) + '"></td><td><button class="btn lien dang" data-act="suppr-ville" data-i="' + i + '">✕</button></td></tr>').join("") +
-    '</table><div class="btns"><button class="btn petit" data-act="ajout-ville">+ Ajouter une ville</button><button class="btn petit" data-act="marche-defaut">Valeurs d\'origine</button></div>' +
-    '<div class="note" style="margin-top:8px">Médianes appartements, RealAdvisor, octobre 2026. Ton fichier utilisait 2 388 €/m² et 12,9 €/m² pour Villefranche, et 4 222 €/m² / 16,2 €/m² pour Dardilly. Remplace par tes propres relevés (annonces de location du secteur) : c\'est la donnée qui pèse le plus dans les biens à loyer estimé.</div></div>';
+  const vNum = v => v == null || v === "" ? "" : String(v).replace(".", ",");
+  const champM = (i, f, n, v) => '<div class="champ"><label>' + n + '</label><div class="in"><input inputmode="decimal" data-m="' + i + '" data-f="' + f + '" value="' + esc(vNum(v)) + '" placeholder="–"></div></div>';
+  h += '<h2>Marché par ville</h2><div class="carte">' +
+    '<div class="ajout"><div class="champ"><div class="in"><input id="nv-ville" list="dl-villes" placeholder="Ajouter une ville : tape son nom" autocomplete="off"></div></div><button class="btn pri" data-act="ajout-ville">Ajouter</button></div><datalist id="dl-villes"></datalist>' +
+    '<div class="note" style="margin-top:6px">Prix et loyers se chargent tout seuls. Les villes de tes annonces sont aussi ajoutées automatiquement.</div>' +
+    P.marche.map((m, i) => {
+      const enCours = marcheEnCours.has(norm(m.ville));
+      const info = [m.src || "", m.nbApp ? fmtN(m.nbApp) + " ventes d'apparts" : "", m.date ? "maj " + new Date(m.date).toLocaleDateString("fr-FR") : "", estPerso(m) ? "modifié à la main" : ""].filter(Boolean).join(" · ");
+      return '<div class="ville-m"><div class="lig"><div class="l"><b>' + esc(m.ville || "Sans nom") + '</b> <span class="note">' + esc(m.cp || "") + '</span><div class="d">' + (enCours ? "chargement…" : esc(info)) + '</div></div>' +
+        '<button class="btn lien" data-act="maj-ville" data-i="' + i + '" title="Recharger les données publiques">↻</button><button class="btn lien dang" data-act="suppr-ville" data-i="' + i + '" title="Supprimer">✕</button></div>' +
+        '<div class="champs c4">' + champM(i, "prixM2", "Prix appart €/m²", m.prixM2) + champM(i, "prixM2Maison", "Prix maison €/m²", m.prixM2Maison) +
+        champM(i, "loyerM2", "Loyer appart €/m²", m.loyerM2) + champM(i, "loyerM2Maison", "Loyer maison €/m²", m.loyerM2Maison) + '</div></div>';
+    }).join("") +
+    '<div class="btns"><button class="btn petit" data-act="maj-tout">↻ Tout actualiser</button></div>' +
+    '<div class="note" style="margin-top:8px"><b>Prix</b> : médiane des ventes réelles (DVF, notaires) des 12 derniers mois publiés, 5 ans si trop peu de ventes. <b>Loyers</b> : Carte des loyers 2025 du ministère du Logement, loyers d\'annonce <b>charges comprises</b>, donc un peu au-dessus d\'un loyer hors charges. Une valeur modifiée à la main n\'est plus mise à jour automatiquement ; ↻ la remet sur les données publiques.</div></div>';
   // import
   h += '<h2>Import depuis Leboncoin / SeLoger</h2><div class="carte"><div class="note">Ces sites bloquent la lecture de leurs pages par une autre appli. La solution fiable : un <b>favori</b> que tu touches <b>sur la page de l\'annonce</b> ; il lit l\'annonce et l\'envoie ici, déjà calculée.</div>' +
     '<div class="btns"><a class="favori" id="lien-favori" href="#">→ Rendement</a><button class="btn" data-act="copier-favori">Copier le code</button></div>' +
@@ -859,10 +995,37 @@ function rendreReglages(){
   }));
   $("#v-reglages").querySelectorAll("[data-m]").forEach(el => el.addEventListener("input", () => {
     const m = P.marche[+el.dataset.m], f = el.dataset.f;
-    if(f === "ville") m.ville = el.value; else { const v = decimal(el.value); if(!isNaN(v)) m[f] = v; }
-    m.src = "perso"; sauverP();
+    const s = el.value.trim(), v = decimal(s);
+    if(s === "") m[f] = null; else if(!isNaN(v)) m[f] = v; else return;
+    m.perso = true; sauverP();
   }));
+  let _dlT = null;
+  $("#nv-ville").addEventListener("input", e => {
+    clearTimeout(_dlT);
+    const q = e.target.value.trim();
+    if(q.length < 2 || /\(\d{5}\)$/.test(q)) return;
+    _dlT = setTimeout(async () => {
+      try {
+        const l = await chercherCommunes(q, null, 8);
+        $("#dl-villes").innerHTML = l.map(c => (c.codesPostaux || []).slice(0, 1).map(cp => '<option value="' + esc(c.nom + " (" + cp + ")") + '">').join("")).join("");
+      } catch(x){}
+    }, 250);
+  });
+  $("#nv-ville").addEventListener("keydown", e => { if(e.key === "Enter") ajouterVille(); });
   $("#fichier").onchange = importerJSON;
+}
+
+async function ajouterVille(){
+  const el = $("#nv-ville"); if(!el) return;
+  const s = el.value.trim(); if(!s){ el.focus(); return; }
+  const m = s.match(/^(.*?)\s*\((\d{5})\)\s*$/), cpSeul = /^\d{5}$/.test(s);
+  const nom = m ? m[1] : (cpSeul ? "" : s), cp = m ? m[2] : (cpSeul ? s : "");
+  toast("Recherche de " + s + "…");
+  try {
+    const r = await chargerVille(nom, cp);
+    toast(!r ? "Recherche déjà en cours" : r.introuvable ? "Commune introuvable" : r.vide ? "Pas de données publiques pour " + r.commune.nom : r.ville + " ajoutée");
+  } catch(x){ toast("Pas de connexion aux données publiques"); }
+  rendreReglages();
 }
 
 /* ---------------- sauvegarde ---------------- */
@@ -1002,9 +1165,15 @@ document.addEventListener("click", async e => {
     const c = nouveauBien(Object.assign(JSON.parse(JSON.stringify(b)), { id:uid(), titre:b.titre + " (copie)", url:"", hist:[], cree:Date.now(), maj:Date.now() }));
     biens.unshift(c); sauverB(); courant = c.id; store.set("courant", courant); derniereLecture = null; rendreAnalyse(); toast("Copie créée : fais varier les hypothèses");
   }
-  else if(a === "ajout-ville"){ P.marche.push({ ville:"", cp:"", prixM2:2500, loyerM2:13, src:"perso" }); sauverP(); rendreReglages(); }
-  else if(a === "suppr-ville"){ P.marche.splice(+el.dataset.i, 1); sauverP(); rendreReglages(); }
-  else if(a === "marche-defaut"){ P.marche = JSON.parse(JSON.stringify(MARCHE_DEFAUT)); sauverP(); rendreReglages(); toast("Références marché d'origine rétablies"); }
+  else if(a === "ajout-ville") ajouterVille();
+  else if(a === "suppr-ville"){ const i = +el.dataset.i, m = P.marche[i]; P.marche.splice(i, 1); sauverP(); rendreReglages(); toast(m.ville + " supprimée", { label:"Annuler", fn:() => { P.marche.splice(i, 0, m); sauverP(); rendreReglages(); } }); }
+  else if(a === "maj-ville"){
+    const m = P.marche[+el.dataset.i]; if(!m) return;
+    const p = chargerVille(m.ville, m.cp); rendreReglages();
+    const r = await p.catch(() => null); rendreReglages();
+    toast(!r ? "Pas de connexion aux données publiques" : r.introuvable ? "Commune introuvable" : r.vide ? "Pas de données publiques pour cette commune" : m.ville + " mise à jour");
+  }
+  else if(a === "maj-tout"){ toast("Actualisation…"); const k = await rafraichirMarche(true); rendreReglages(); toast(k ? k + " ville(s) mises à jour" : "Pas de connexion aux données publiques"); }
   else if(a === "reglages-defaut"){ const m = P.marche; P = Object.assign({}, P_DEFAUT, { marche:m }); sauverP(); rendreReglages(); toast("Réglages par défaut (villes conservées)"); }
   else if(a === "copier-favori"){
     try { await navigator.clipboard.writeText(decodeURIComponent(codeFavori())); toast("Code du favori copié"); }
@@ -1023,6 +1192,8 @@ document.addEventListener("keydown", e => { if(e.key === "Enter" && (e.ctrlKey |
 /* ---------------- démarrage ---------------- */
 $("#ver-chip").textContent = "v" + VERSION;
 if(!recevoir()) rendre();
+setTimeout(() => rafraichirMarche(false), 400);
+window.addEventListener("online", () => rafraichirMarche(false));
 </script>
 </body>
 </html>
