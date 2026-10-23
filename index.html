@@ -183,6 +183,105 @@ ol.etapes b{color:var(--texte);font-weight:600}
 #modal h3{margin:0 0 4px}
 #modal .sous{color:var(--gris);font-size:13px;margin-bottom:10px}
 #modal ul{padding-left:18px;font-size:14px;line-height:1.55}
+
+/* synthèse en tête de l'analyse */
+.syn-tete{display:flex;gap:14px;align-items:center}
+.syn-tete .inf{flex:1;min-width:0}
+.syn .verdict{font-size:18px}
+.syn .verdict-s{margin-top:10px}
+.syn-titre{font-weight:600;font-size:14px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.syn-sous{font-size:12.5px;color:var(--gris);margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dpe{display:inline-grid;place-items:center;min-width:20px;height:18px;padding:0 5px;border-radius:5px;font-weight:700;font-size:11px;color:#fff}
+.anneau.p,.anneau.p svg{width:72px;height:72px}
+.anneau.p .v b{font-size:22px}
+.anneau.p .v small{font-size:10px;margin-top:0}
+.syn-prix{display:flex;align-items:center;gap:8px;margin-top:12px;padding:12px 0;border-top:1px solid var(--ligne);border-bottom:1px solid var(--ligne)}
+.syn-prix>div{flex:1;min-width:0}
+.syn-prix .fl{flex:none;color:var(--gris);font-size:18px}
+.syn-prix .l{font-size:12px;color:var(--gris)}
+.syn-prix .gros{font-family:var(--mono);font-size:21px;margin-top:2px}
+.syn-prix .d{font-size:12px;margin-top:1px}
+.kpis.k3{grid-template-columns:repeat(3,1fr)}
+.kpis.k3 .kpi{padding:9px 10px}
+.kpis.k3 .kpi .v{font-size:16px;letter-spacing:-.02em;white-space:nowrap}
+.kpi{border-left:3px solid transparent}
+.kpi .barre{height:4px;margin-top:6px}
+.kpi.bon{border-left-color:var(--bon)} .kpi.bon .v{color:var(--bon)} .kpi.bon .barre i{background:var(--bon)}
+.kpi.moyen{border-left-color:var(--moyen)} .kpi.moyen .v{color:var(--moyen)} .kpi.moyen .barre i{background:var(--moyen)}
+.kpi.mauvais{border-left-color:var(--mauvais)} .kpi.mauvais .v{color:var(--mauvais)} .kpi.mauvais .barre i{background:var(--mauvais)}
+.flux{margin-top:14px}
+.flux-t{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--gris)}
+.flux-t b{font-family:var(--mono);font-weight:500;white-space:nowrap}
+.pile{position:relative;display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--carte2);margin-top:6px}
+.pile i{display:block;height:100%}
+.pile .effort{position:absolute;top:0;bottom:0;right:0;background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(0,0,0,.3) 4px 7px);border-left:2px solid var(--texte)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:12px;color:var(--gris)}
+.leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.syn-al{display:flex;width:100%;align-items:center;gap:8px;margin-top:12px;padding:9px 12px;border:none;border-radius:10px;background:color-mix(in srgb,var(--moyen) 14%,transparent);font-size:13px;cursor:pointer;text-align:left}
+.syn-al.r{background:color-mix(in srgb,var(--mauvais) 14%,transparent)}
+.syn-al span{flex:1}
+.sim{margin-top:10px}
+.sim input[type=range]{width:100%;accent-color:var(--acc);margin:10px 0 2px}
+.sim-ech{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--gris)}
+#barre-kpi{position:fixed;left:0;right:0;top:calc(55px + env(safe-area-inset-top));z-index:19;background:var(--carte);border-bottom:1px solid var(--ligne);box-shadow:0 4px 12px rgba(0,0,0,.06);cursor:pointer}
+#barre-kpi .wrap{display:flex;align-items:center;gap:6px;height:46px}
+#barre-kpi .pastille{width:32px;height:32px;font-size:13px}
+#barre-kpi .bk{flex:1;text-align:center;min-width:0}
+#barre-kpi .bk small{display:block;font-size:10.5px;color:var(--gris)}
+#barre-kpi .bk b{font-family:var(--mono);font-weight:500;font-size:13px;white-space:nowrap}
+.bien .suppr{flex:none;color:var(--gris);padding:8px;align-self:center}
+.bien .suppr svg{width:18px;height:18px;display:block}
+.bien .suppr:hover{color:var(--mauvais)}
+@media (max-width:350px){ .kpis.k3{grid-template-columns:1fr 1fr} }
+
+/* comparaison */
+.coche{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--ligne);display:grid;place-items:center;color:transparent;font-size:14px;font-weight:700;align-self:center}
+.coche.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.bien.choisi{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.barre-comp{position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom));z-index:25;padding:0 16px}
+.barre-comp .in{max-width:648px;margin:0 auto;display:flex;align-items:center;gap:10px;background:var(--texte);color:var(--fond);border-radius:14px;padding:8px 8px 8px 16px;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.barre-comp .in span{flex:1}
+.comp-tete{display:grid;gap:8px;position:sticky;top:calc(55px + env(safe-area-inset-top));z-index:5;background:var(--fond);padding:8px 0}
+.comp-col{text-align:center;cursor:pointer;background:var(--carte);border:1px solid var(--ligne);border-radius:12px;padding:10px 6px;min-width:0}
+.comp-col .pastille{width:40px;height:40px;font-size:15px;margin:0 auto}
+.comp-t{font-size:12.5px;font-weight:600;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+.comp-v{font-size:12px;font-weight:600;margin-top:2px}
+.comp-sec{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);font-weight:600;margin:16px 0 2px}
+.comp-sec:first-child{margin-top:0}
+.comp-l{padding:7px 0;border-bottom:1px solid var(--ligne)}
+.comp-n{font-size:12px;color:var(--gris);margin-bottom:3px}
+.comp-vals{display:grid;gap:8px}
+.comp-vals>div{text-align:center;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;border-radius:8px;padding:3px 2px;min-width:0}
+.comp-vals small{display:block;font-family:var(--sans);font-size:11px;color:var(--gris);font-weight:400}
+.comp-vals .txt{font-family:var(--sans);font-size:12.5px;overflow-wrap:anywhere}
+.comp-vals .mieux{background:var(--acc-doux);color:var(--bon);font-weight:600}
+
+/* fiche PDF pour la banque : invisible à l'écran, seule chose imprimée */
+#impression{display:none}
+@media print{
+  @page{size:A4;margin:14mm}
+  html,body{background:#fff!important;color:#111!important;padding:0!important;font-size:10.5pt}
+  body>*:not(#impression){display:none!important}
+  #impression{display:block;color:#111}
+  #impression *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+.imp-tete{display:flex;justify-content:space-between;gap:16pt;align-items:flex-start;border-bottom:2px solid #1f6f50;padding-bottom:8pt;margin-bottom:10pt}
+.imp-sur{font-size:9pt;text-transform:uppercase;letter-spacing:.08em;color:#1f6f50;font-weight:600}
+#impression h1{font-size:17pt;margin:2pt 0;line-height:1.2}
+.imp-sous,.imp-date{color:#555;font-size:10pt}
+.imp-date{white-space:nowrap}
+.imp-url{font-size:8pt;color:#555;word-break:break-all;margin-top:2pt}
+.imp-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6pt;margin-bottom:4pt}
+.imp-kpis div{border:1px solid #ddd;border-radius:6pt;padding:6pt 8pt;background:#f6f5f1}
+.imp-kpis span{display:block;font-size:8.5pt;color:#555}
+.imp-kpis b{font-family:var(--mono);font-size:13pt;font-weight:500}
+.imp-2col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16pt}
+#impression h2{font-size:9.5pt;color:#1f6f50;margin:12pt 0 3pt}
+#impression table{width:100%;border-collapse:collapse;font-size:10pt}
+#impression td{padding:3.5pt 0;border-bottom:1px solid #e5e5e5;vertical-align:top}
+#impression td+td{text-align:right;font-family:var(--mono);white-space:nowrap;padding-left:8pt}
+#impression tr.tot td{font-weight:700;border-bottom:1.5px solid #999}
+.imp-pied{margin-top:14pt;font-size:8.5pt;color:#666;line-height:1.5}
 @media (max-width:380px){ .champs{grid-template-columns:1fr} .kpi .v{font-size:17px} }
 </style>
 </head>
@@ -198,6 +297,7 @@ ol.etapes b{color:var(--texte);font-weight:600}
   <section id="v-biens"></section>
   <section id="v-analyse" class="hide"></section>
   <section id="v-reglages" class="hide"></section>
+  <section id="v-comparer" class="hide"></section>
 </main>
 
 <nav class="bas"><div class="wrap">
@@ -206,14 +306,31 @@ ol.etapes b{color:var(--texte);font-weight:600}
   <button data-vue="reglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Réglages</button>
 </div></nav>
 
+<div id="barre-kpi" class="hide" data-act="haut"><div class="wrap"></div></div>
 <div id="toast"></div>
+<div id="impression"></div>
 <div id="modal"></div>
 
 <script>
 "use strict";
-const VERSION = "1.1.0";
+const VERSION = "1.3.0";
 const SCHEMA = 1;
 const JOURNAL = [
+  { v:"1.3.0", d:"2026-10-23", t:"Comparer et présenter", l:[
+    "Comparer 2 ou 3 biens côte à côte : bouton « Comparer » dans la liste, le meilleur chiffre de chaque ligne en vert.",
+    "Fiche PDF pour la banque : plan de financement, loyers, charges, rentabilité, mensualité couverte par le loyer.",
+    "Annonce copiée détectée : en revenant dans l'appli, elle propose de l'analyser (après un premier usage du bouton « Coller »).",
+    "Le favori « → Rendement » réutilise toujours le même onglet au lieu d'en ouvrir un nouveau (recrée le favori pour en profiter).",
+    "Leboncoin : charges de copro et taxe foncière lues aussi dans les caractéristiques de l'annonce quand elles y sont."
+  ]},
+  { v:"1.2.0", d:"2026-10-23", t:"Synthèse en un coup d'œil", l:[
+    "L'analyse s'ouvre sur une fiche synthèse : prix, offre max, 6 indicateurs colorés (vert / orange / rouge) et où va le loyer chaque mois.",
+    "Une barre d'indicateurs reste affichée en haut quand tu descends modifier les champs.",
+    "« Et si je négocie ? » : un curseur pour voir l'effet d'une baisse de prix sur tous les chiffres, et la retenir.",
+    "Suppression d'un bien directement depuis la liste (avec Annuler).",
+    "Coller une annonce dans la zone de saisie lance l'analyse tout seul.",
+    "Les 8 biens du fichier Excel ne sont plus chargés : ils sont retirés une fois pour toutes."
+  ]},
   { v:"1.1.0", d:"2026-10-23", t:"Marché automatique", l:[
     "Les prix et loyers au m² d'une ville se chargent tout seuls : il suffit de taper son nom.",
     "Prix : ventes réelles des 12 derniers mois (DVF, data.gouv.fr). Loyers : Carte des loyers 2025 du ministère du Logement.",
@@ -222,7 +339,7 @@ const JOURNAL = [
     "Les références se mettent à jour d'elles-mêmes tous les 30 jours (sauf celles que tu as modifiées à la main)."
   ]},
   { v:"1.0.0", d:"2026-10-22", t:"Première version", l:[
-    "Reprise du fichier Excel : les 8 biens sont importés au premier lancement.",
+    "Reprise du fichier Excel (biens de départ retirés en 1.2.0).",
     "Calcul corrigé : frais de notaire (8 % dans l'ancien, Rhône), travaux et mobilier inclus dans le coût total.",
     "Rendement brut, net de charges, net-net d'impôt, cash-flow mensuel avec crédit.",
     "Offre maximale pour atteindre l'objectif (10 % par défaut) et négociation nécessaire.",
@@ -377,20 +494,6 @@ async function rafraichirMarche(force){
 }
 
 /* ---------------- biens ---------------- */
-/* Les 8 biens du fichier Calcul_rendement_immo.xlsx. Les biens 1 à 3 avaient un
-   loyer saisi ; pour les biens 4 à 8 le loyer était « loyer moyen m² × surface » :
-   il est laissé vide ici pour être estimé par l'appli. */
-const lbc = id => "https://www.leboncoin.fr/ad/ventes_immobilieres/" + id;
-const SEED = [
-  ["Bien 1", "Villefranche-sur-Saône", 115000, 36, 550, lbc(2783212145)],
-  ["Bien 2", "Villefranche-sur-Saône", 117000, 50, 650, lbc(2881154297)],
-  ["Bien 3", "Dardilly", 97000, 31, 610, lbc(2886898951)],
-  ["Bien 4", "Villefranche-sur-Saône", 129000, 81, null, lbc(2856593638)],
-  ["Bien 5", "Gleizé", 149000, 41, null, ""],
-  ["Bien 6", "Villefranche-sur-Saône", 139000, 57, null, lbc(2915489095)],
-  ["Bien 7", "Villefranche-sur-Saône", 149000, 66, null, lbc(2894950025)],
-  ["Bien 8", "Villefranche-sur-Saône", 150000, 42, null, ""]
-];
 function nouveauBien(o){
   return Object.assign({
     id:uid(), cree:Date.now(), maj:Date.now(), url:"", source:"", titre:"", type:"appartement",
@@ -398,11 +501,11 @@ function nouveauBien(o){
     copro:null, tf:null, travaux:0, mobilier:0, neuf:false, statut:"à voir", note:"", hist:[]
   }, o || {});
 }
-let biens = store.get("biens", null);
-if(!biens){
-  biens = SEED.map((s, i) => nouveauBien({ id:"xl" + (i + 1), titre:s[0] + " (fichier Excel)", ville:s[1], cp: s[1] === "Dardilly" ? "69570" : "69400",
-    prix:s[2], surface:s[3], loyer:s[4], url:s[5], source: s[5] ? "leboncoin" : "", cree:Date.now() - (8 - i) * 1000 }));
-  store.set("biens", biens);
+let biens = store.get("biens", null) || [];
+// les anciennes versions créaient 8 biens tirés du fichier Excel (id « xl1 » à « xl8 ») : on les retire une fois
+if(!store.get("sansExcel", false)){
+  biens = biens.filter(b => !/^xl\d+$/.test(b.id));
+  store.set("biens", biens); store.set("sansExcel", true);
 }
 store.set("schema", SCHEMA);
 const sauverB = () => store.set("biens", biens);
@@ -631,6 +734,9 @@ function parsePayload(d){
       else if(k === "real_estate_type") f.type = /maison/i.test(lab || "") || v === "1" ? "maison" : "appartement";
       else if(k === "energy_rate" && /^[a-g]$/i.test(v || "")) f.dpe = v.toUpperCase();
       else if(k === "furnished" && (v === "1" || /meubl/i.test(lab || ""))) f.meuble = true;
+      // noms de caractéristiques variables selon les annonces : on reconnaît le sens plutôt qu'une clé exacte
+      else if(/charge|copro/i.test(k) && !/inclu/i.test(k) && argent(v) > 0) f.copro = argent(v) * (/month|mensu/i.test(k) ? 12 : 1);
+      else if(/tax|fonci/i.test(k) && argent(v) > 50) f.tf = argent(v);
     });
     const fd = parseTexte(a.b || "");
     for(const k of ["copro", "tf", "loyer", "dpe", "surface", "pieces", "meuble"]) if(f[k] == null && fd[k] != null) f[k] = fd[k];
@@ -669,8 +775,8 @@ function integrer(f, origine){
 }
 let derniereLecture = null;
 
-function analyserSaisie(){
-  const txt = ($("#saisie") || {}).value || "";
+function analyserSaisie(texte){
+  const txt = typeof texte === "string" ? texte : (($("#saisie") || {}).value || "");
   const s = txt.trim();
   if(!s){ toast("Colle un lien ou le texte d'une annonce"); return; }
   const seulLien = /^https?:\/\/\S+$/.test(s);
@@ -723,7 +829,7 @@ function codeFavori(){
     "if(a){d.lbc={s:a.subject,p:a.price,b:(a.body||'').slice(0,5000),c:a.location&&a.location.city,z:a.location&&a.location.zipcode,at:(a.attributes||[]).map(function(x){return[x.key,x.value,x.value_label]})}}}}catch(e){}" +
     "try{d.ld=[].slice.call(document.querySelectorAll('script[type=\"application/ld+json\"]')).map(function(s){return s.textContent.slice(0,4000)}).slice(0,6)}catch(e){}" +
     "d.x=(document.body.innerText||'').slice(0,9000);" +
-    "var s=btoa(unescape(encodeURIComponent(JSON.stringify(d))));var w=window.open(A+'#import='+s,'_blank');if(!w)location.href=A+'#import='+s})();";
+    "var s=btoa(unescape(encodeURIComponent(JSON.stringify(d))));var w=window.open(A+'#import='+s,'rendement');if(!w)location.href=A+'#import='+s})();";
   return "javascript:" + encodeURIComponent(c);
 }
 
@@ -733,41 +839,94 @@ let tri = store.get("tri", "score");
 function allerVue(v){
   vue = v;
   document.querySelectorAll("nav.bas button").forEach(b => b.classList.toggle("on", b.dataset.vue === v));
-  ["biens", "analyse", "reglages"].forEach(x => $("#v-" + x).classList.toggle("hide", x !== v));
+  ["biens", "analyse", "reglages", "comparer"].forEach(x => $("#v-" + x).classList.toggle("hide", x !== v));
   rendre();
+  majVisBarre();
   window.scrollTo(0, 0);
 }
 function rendre(){
   if(vue === "biens") rendreBiens();
   else if(vue === "analyse") rendreAnalyse();
+  else if(vue === "comparer") rendreComparer();
   else rendreReglages();
 }
 
 function blocImport(){
-  return '<div class="carte import"><textarea id="saisie" placeholder="Colle ici le lien d\'une annonce Leboncoin / SeLoger, ou tout le texte de l\'annonce (sélectionner tout → copier)"></textarea>' +
+  return '<div class="carte import"><textarea id="saisie" placeholder="Colle ici le lien d\'une annonce Leboncoin / SeLoger, ou tout le texte de l\'annonce (sélectionner tout → copier) : l\'analyse se lance toute seule"></textarea>' +
     '<div class="btns"><button class="btn pri" data-act="analyser">Analyser</button><button class="btn" data-act="coller">Coller</button><button class="btn" data-act="vierge">Saisie manuelle</button></div></div>';
 }
 
+const ICONE_SUPPR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+let modeComp = false, selComp = [];
 function rendreBiens(){
+  selComp = selComp.filter(id => biens.some(b => b.id === id));
+  if(biens.length < 2) modeComp = false;
   const l = biens.map(b => ({ b, o:calc(b) }));
   const cle = { score: x => -x.o.score, renta: x => -x.o.rendObj, prix: x => +x.b.prix || 0, cf: x => -x.o.cfNet, recent: x => -x.b.maj };
   l.sort((a, z) => cle[tri](a) - cle[tri](z));
   let h = '<h2>Nouvelle annonce</h2>' + blocImport();
-  h += '<div class="outils"><h2 style="margin:0;flex:1">Mes biens · ' + biens.length + '</h2><select id="tri">' +
+  h += '<div class="outils"><h2 style="margin:0;flex:1">Mes biens · ' + biens.length + '</h2>' +
+    (biens.length >= 2 ? '<button class="btn petit' + (modeComp ? " pri" : "") + '" data-act="mode-comp">' + (modeComp ? "Annuler" : "Comparer") + '</button>' : "") + '<select id="tri">' +
     [["score","Meilleur score"],["renta","Rendement"],["cf","Cash-flow"],["prix","Prix"],["recent","Récents"]].map(([k, n]) => '<option value="' + k + '"' + (k === tri ? " selected" : "") + '>' + n + '</option>').join("") + '</select></div>';
   if(!l.length) h += '<div class="carte vide note">Aucun bien pour l\'instant. Colle une annonce ci-dessus.</div>';
   for(const { b, o } of l){
     const baisse = b.hist && b.hist.length ? b.hist[0].prix - b.prix : 0;
-    h += '<div class="carte bien" data-act="ouvrir" data-id="' + b.id + '">' +
+    const choisi = selComp.includes(b.id);
+    h += '<div class="carte bien' + (modeComp && choisi ? " choisi" : "") + '" data-act="ouvrir" data-id="' + b.id + '">' +
       '<div class="pastille" style="background:' + (o.ok ? o.couleur : "var(--gris)") + '">' + (o.ok ? o.score : "–") + '</div>' +
       '<div class="inf"><div class="t">' + esc(b.titre || "Sans titre") + (b.statut && b.statut !== "à voir" ? '<span class="statut">' + esc(b.statut) + '</span>' : "") + '</div>' +
       '<div class="s">' + esc([b.ville, b.prix ? eur(b.prix) : "", b.surface ? fmtN(b.surface) + " m²" : "", b.dpe ? "DPE " + b.dpe : ""].filter(Boolean).join(" · ")) +
       (baisse > 0 ? ' · <span style="color:var(--bon)">−' + eur(baisse) + '</span>' : "") + '</div>' +
       (o.ok ? '<div class="k"><span>Brut <b>' + pct(o.brut) + '</b></span><span>Net <b>' + pct(o.net) + '</b></span><span>Cash-flow <b>' + sgn(o.cfNet) + '</b>/mois</span></div>' : "") +
-      '</div></div>';
+      '</div>' + (modeComp ? '<span class="coche' + (choisi ? " on" : "") + '">✓</span>'
+        : '<button class="btn lien suppr" data-act="suppr-bien" data-id="' + b.id + '" title="Supprimer ce bien" aria-label="Supprimer ce bien">' + ICONE_SUPPR + '</button>') + '</div>';
+  }
+  if(modeComp){
+    h += '<div style="height:64px"></div><div class="barre-comp"><div class="in"><span>' + (selComp.length < 2 ? "Choisis 2 ou 3 biens (" + selComp.length + "/3)" : selComp.length + " biens choisis") + '</span>' +
+      (selComp.length >= 2 ? '<button class="btn pri petit" data-act="lancer-comp">Comparer →</button>' : "") + '</div></div>';
   }
   $("#v-biens").innerHTML = h;
   $("#tri").onchange = e => { tri = e.target.value; store.set("tri", tri); rendreBiens(); };
+}
+
+/* une ligne par indicateur : [libellé, (b, o) => [valeur pour classer, texte], sens] ; sens 1 = plus haut c'est mieux, -1 = plus bas, 0 = pas de classement */
+const LIGNES_COMP = [
+  ["Le bien"],
+  ["Ville", b => [null, '<span class="txt">' + esc(b.ville || "–") + '</span>'], 0],
+  ["Surface", b => [+b.surface || null, b.surface ? fmtN(b.surface) + " m²" : "–"], 0],
+  ["DPE", b => [b.dpe ? "ABCDEFG".indexOf(b.dpe) : null, b.dpe ? '<span class="dpe" style="background:' + DPE_C[b.dpe] + '">' + b.dpe + '</span>' : "?"], -1],
+  ["Prix affiché", b => [+b.prix, eur(b.prix)], -1],
+  ["Prix / m²", (b, o) => [o.prixM2, eur(o.prixM2) + (o.ecartPrix != null ? "<small>" + (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + " vs marché</small>" : "")], -1],
+  ["Coût total", (b, o) => [o.cout, eur(o.cout)], -1],
+  ["Rentabilité"],
+  ["Loyer", (b, o) => [o.loyer, eur(o.loyer) + (o.loyerEstime ? "<small>estimé</small>" : "")], 0],
+  ["Rendement brut", (b, o) => [o.brut, pct(o.brut)], 1],
+  ["Rendement net", (b, o) => [o.net, pct(o.net)], 1],
+  ["Net-net", (b, o) => [o.netNet, pct(o.netNet)], 1],
+  ["Cash-flow / mois", (b, o) => [o.cfNet, sgn(o.cfNet)], 1],
+  ["Négociation"],
+  ["Offre max", (b, o) => [null, eur(Math.round(o.offre / 500) * 500)], 0],
+  ["À négocier", (b, o) => [o.nego, o.nego <= 0 ? "atteint" : "−" + pct(o.nego, 0)], -1],
+  ["Points d'attention", (b, o) => { const n = o.alertes.filter(a => a[0] !== "var(--gris)").length; return [n, String(n)]; }, -1]
+];
+function rendreComparer(){
+  const l = selComp.map(id => biens.find(b => b.id === id)).filter(Boolean).map(b => ({ b, o:calc(b) }));
+  let h = '<div class="outils" style="margin-top:16px"><button class="btn petit" data-act="vue-biens">← Biens</button><div class="esp"></div></div>';
+  if(l.length < 2){ $("#v-comparer").innerHTML = h + '<div class="carte note">Choisis 2 ou 3 biens dans la liste avec le bouton « Comparer ».</div>'; return; }
+  const g = ' style="grid-template-columns:repeat(' + l.length + ',1fr)"';
+  h += '<div class="comp-tete"' + g + '>' + l.map(({ b, o }) => '<div class="comp-col" data-act="ouvrir-comp" data-id="' + b.id + '"><div class="pastille" style="background:' + (o.ok ? o.couleur : "var(--gris)") + '">' + (o.ok ? o.score : "–") + '</div>' +
+    '<div class="comp-t">' + esc(b.titre || "Sans titre") + '</div><div class="comp-v" style="color:' + (o.ok ? o.couleur : "var(--gris)") + '">' + (o.ok ? o.verdict[0] : "incomplet") + '</div></div>').join("") + '</div>';
+  h += '<div class="carte">';
+  for(const [nom, fn, sens] of LIGNES_COMP){
+    if(!fn){ h += '<div class="comp-sec">' + nom + '</div>'; continue; }
+    const vals = l.map(({ b, o }) => fn(b, o));
+    const nums = vals.map(v => v[0]).filter(v => v != null && isFinite(v));
+    const best = sens && nums.length > 1 && Math.min(...nums) !== Math.max(...nums) ? (sens > 0 ? Math.max(...nums) : Math.min(...nums)) : null;
+    h += '<div class="comp-l"><div class="comp-n">' + nom + '</div><div class="comp-vals"' + g + '>' +
+      vals.map(v => '<div' + (best != null && v[0] === best ? ' class="mieux"' : "") + '>' + v[1] + '</div>').join("") + '</div></div>';
+  }
+  h += '</div><div class="note" style="margin:10px 0">En vert : le meilleur des biens comparés sur la ligne. Touche un bien pour ouvrir son analyse.</div>';
+  $("#v-comparer").innerHTML = h;
 }
 
 const CHAMPS = [
@@ -806,8 +965,12 @@ function rendreAnalyse(){
   let h = "";
   if(!b){ $("#v-analyse").innerHTML = '<h2>Analyser une annonce</h2>' + blocImport(); return; }
   const lect = derniereLecture && derniereLecture.url === b.url ? derniereLecture : (derniereLecture && courant === b.id ? derniereLecture : null);
-  h += '<div class="outils" style="margin-top:16px"><button class="btn petit" data-act="vue-biens">← Biens</button><div class="esp"></div>' +
+  h += '<div class="outils" style="margin-top:16px"><button class="btn petit" data-act="vue-biens">← Biens</button><div class="esp"></div><button class="btn petit" data-act="pdf">PDF banque</button>' +
     (b.url ? '<a class="btn petit" href="' + esc(b.url) + '" target="_blank" rel="noopener" style="text-decoration:none">Ouvrir l\'annonce ↗</a>' : "") + '</div>';
+  h += '<div id="synthese"></div>' +
+    '<div class="carte sim hide" id="sim"><div class="lig"><div class="l"><b>Et si je négocie ?</b><div class="d" id="sim-t"></div></div><button class="btn petit pri hide" id="sim-ok" data-act="sim-retenir">Retenir ce prix</button></div>' +
+    '<input type="range" id="sim-r" min="0" max="30" step="1" value="0" aria-label="Baisse de prix simulée">' +
+    '<div class="sim-ech"><span>prix affiché</span><button class="btn lien petit" data-act="sim-offre">caler sur l\'offre max</button><span>−30 %</span></div></div>';
   if(lect){
     if(lect.lienSeul){
       h += '<div class="retour attention"><b>Lien enregistré, mais je ne peux pas lire la page depuis l\'appli</b> : Leboncoin et SeLoger bloquent les lectures automatiques venant d\'un autre site. Deux façons de remplir la fiche en un geste :' +
@@ -827,6 +990,13 @@ function rendreAnalyse(){
   h += '</div></div>';
   h += '<div class="btns" style="margin-top:14px"><button class="btn" data-act="dupliquer">Dupliquer</button><button class="btn dang" data-act="supprimer">Supprimer ce bien</button></div>';
   $("#v-analyse").innerHTML = h;
+  $("#sim-r").addEventListener("input", e => { simNego = +e.target.value; simPour = b.id; rendreResultats(); });
+  if(obsSyn) obsSyn.disconnect();
+  synVisible = true;
+  if(window.IntersectionObserver){
+    obsSyn = new IntersectionObserver(([e]) => { synVisible = e.isIntersecting; majVisBarre(); }, { rootMargin:"-56px 0px 0px 0px" });
+    obsSyn.observe($("#synthese"));
+  }
   rendreResultats();
   $("#v-analyse").querySelectorAll("[data-k]").forEach(el => {
     el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
@@ -846,32 +1016,106 @@ function rendreAnalyse(){
   });
 }
 
+/* simulation de négociation : ne touche pas au bien tant qu'on ne la retient pas */
+let simNego = 0, simPour = null;
+function bienSimule(b){
+  if(simPour !== b.id) simNego = 0;
+  return simNego && b.prix ? Object.assign({}, b, { prix: Math.round(b.prix * (1 - simNego / 100) / 100) * 100 }) : b;
+}
+function majSim(b0, b, o){
+  const s = $("#sim"); if(!s) return;
+  s.classList.toggle("hide", !(+b0.prix > 0 && o.ok));
+  const r = $("#sim-r"); if(document.activeElement !== r) r.value = simNego;
+  $("#sim-t").textContent = simNego ? "À " + eur(b.prix) + " (−" + simNego + " %) : tous les chiffres ci-dessus sont recalculés." : "Fais glisser pour voir l'effet d'une baisse de prix.";
+  $("#sim-ok").classList.toggle("hide", !simNego);
+}
+
+/* couleur de chaque indicateur : vert = objectif tenu, orange = proche, rouge = loin */
+function tons(o){
+  const obj = P.objectif / 100, objNet = P.base === "nette" ? obj : obj * 0.75;
+  return {
+    objNet,
+    brut: o.brut >= obj ? "bon" : o.brut >= obj * 0.8 ? "moyen" : "mauvais",
+    net: o.net >= objNet ? "bon" : o.net >= objNet * 0.8 ? "moyen" : "mauvais",
+    cf: o.cfNet >= 0 ? "bon" : o.cfNet >= -100 ? "moyen" : "mauvais",
+    m2: o.ecartPrix == null ? "" : o.ecartPrix <= 0 ? "bon" : o.ecartPrix <= 0.1 ? "moyen" : "mauvais",
+    offre: o.nego <= 0 ? "bon" : o.nego <= 0.1 ? "moyen" : "mauvais"
+  };
+}
+const TON = { bon:"var(--bon)", moyen:"var(--moyen)", mauvais:"var(--mauvais)", "":"" };
+const DPE_C = { A:"#2e8b57", B:"#5aa845", C:"#a6c43a", D:"#d9b414", E:"#f0a02c", F:"#e0632b", G:"#c9302c" };
+const tuile = (l, v, d, t, jauge) => '<div class="kpi ' + (t || "") + '"><div class="l">' + l + '</div><div class="v">' + v + '</div>' +
+  (jauge != null ? '<div class="barre"><i style="width:' + clamp(jauge, 0, 1) * 100 + '%"></i></div>' : "") + '<div class="d">' + d + '</div></div>';
+
+function synthese(b, o){
+  const t = tons(o), C = 2 * Math.PI * 42;
+  const sous = [b.ville, b.surface ? fmtN(b.surface) + " m²" : "", b.pieces ? (+b.pieces === 1 ? "studio" : "T" + b.pieces) : "", b.meuble ? "meublé" : ""].filter(Boolean).map(esc).join(" · ");
+  const dpe = b.dpe ? '<span class="dpe" style="background:' + DPE_C[b.dpe] + '">DPE ' + b.dpe + '</span>' : '<span class="dpe" style="background:var(--gris)">DPE ?</span>';
+  const nR = o.alertes.filter(a => a[0] === "var(--mauvais)").length, nA = o.alertes.filter(a => a[0] !== "var(--gris)").length;
+  return '<div class="carte syn"><div class="syn-tete">' +
+      '<div class="anneau p"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="none" stroke="var(--carte2)" stroke-width="10"/><circle cx="48" cy="48" r="42" fill="none" stroke="' + o.couleur + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (C * o.score / 100) + ' ' + C + '"/></svg><div class="v"><div><b>' + o.score + '</b><small>/ 100</small></div></div></div>' +
+      '<div class="inf"><div class="verdict" style="color:' + o.couleur + '">' + o.verdict[0] + '</div><div class="syn-titre">' + esc(b.titre || "Sans titre") + '</div><div class="syn-sous">' + (sous ? '<span>' + sous + '</span>' : "") + dpe + '</div></div></div>' +
+    '<div class="verdict-s">' + o.verdict[1] + '</div>' +
+    '<div class="syn-prix"><div><div class="l">' + (simNego ? "Prix simulé" : "Prix affiché") + '</div><div class="gros">' + eur(b.prix) + '</div><div class="d note">' + eur(o.cout) + ' tout compris</div></div>' +
+      '<div class="fl">→</div>' +
+      '<div style="text-align:right"><div class="l">Offre max · ' + fmtN(P.objectif, 1) + ' % ' + (P.base === "nette" ? "net" : "brut") + '</div><div class="gros" style="color:' + TON[t.offre] + '">' + eur(Math.round(o.offre / 500) * 500) + '</div><div class="d" style="color:' + TON[t.offre] + '">' + (o.nego <= 0 ? "objectif atteint" : "−" + pct(o.nego, 0) + " à négocier") + '</div></div></div>' +
+    '<div class="kpis k3">' +
+      tuile("Brut", pct(o.brut), "objectif " + fmtN(P.objectif, 1) + " %", t.brut, o.brut / (P.objectif / 100)) +
+      tuile("Net", pct(o.net), "après charges", t.net, o.net / t.objNet) +
+      tuile("Net-net", pct(o.netNet), "après impôt", "", null) +
+      tuile("Cash-flow", sgn(o.cfNet), P.credit ? "/mois, crédit inclus" : "/mois, sans crédit", t.cf, null) +
+      tuile("Loyer", eur(o.loyer), o.loyerEstime ? "estimé (marché)" : o.loyerMarche ? "marché ≈ " + eur(o.loyerMarche) : "saisi", "", null) +
+      tuile("Prix / m²", eur(o.prixM2), o.ecartPrix == null ? "marché inconnu" : (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + " vs marché", t.m2, null) +
+    '</div>' + flux(o) +
+    (nA ? '<button class="syn-al' + (nR ? " r" : "") + '" data-act="voir-alertes"><span>⚠ ' + nA + ' point' + (nA > 1 ? "s" : "") + ' d\'attention</span>›</button>' : "") +
+  '</div>';
+}
+/* où part le loyer chaque mois : charges, crédit, impôt, et ce qui reste (ou ce qu'il faut ajouter) */
+function flux(o){
+  const ch = (o.vacance + o.charges) / 12, cr = o.mens, im = o.impot / 12, cf = o.cfNet;
+  const tot = Math.max(o.loyer, ch + cr + im, 1);
+  const seg = [["Charges", ch, "var(--gris)"], ["Crédit", cr, "var(--acc)"], ["Impôt", im, "var(--moyen)"]];
+  if(cf > 0) seg.push(["Reste", cf, "var(--bon)"]);
+  const vis = seg.filter(s => s[1] > 0.5);
+  return '<div class="flux"><div class="flux-t"><span>Le loyer de ' + eur(o.loyer) + ' / mois</span><b style="color:' + (cf >= 0 ? "var(--bon)" : "var(--mauvais)") + '">' + (cf >= 0 ? "il reste " + sgn(cf) : "tu ajoutes " + eur(-cf)) + '</b></div>' +
+    '<div class="pile">' + vis.map(s => '<i style="width:' + s[1] / tot * 100 + '%;background:' + s[2] + '"></i>').join("") +
+      (cf < 0 ? '<b class="effort" style="left:' + o.loyer / tot * 100 + '%" title="de ta poche"></b>' : "") + '</div>' +
+    '<div class="leg">' + vis.map(s => '<span><i style="background:' + s[2] + '"></i>' + s[0] + ' ' + eur(s[1]) + '</span>').join("") +
+      (cf < 0 ? '<span><i style="background:repeating-linear-gradient(45deg,transparent 0 2px,var(--texte) 2px 3px)"></i>De ta poche ' + eur(-cf) + '</span>' : "") + '</div></div>';
+}
+
+/* barre d'indicateurs fixée en haut quand la synthèse sort de l'écran */
+let synVisible = true, obsSyn = null, barreO = null;
+const bk = (l, v, c) => '<div class="bk"><small>' + l + '</small><b' + (c ? ' style="color:' + c + '"' : "") + '>' + v + '</b></div>';
+function majBarre(o){
+  barreO = o;
+  if(o){
+    const t = tons(o);
+    $("#barre-kpi .wrap").innerHTML = '<div class="pastille" style="background:' + o.couleur + '">' + o.score + '</div>' +
+      bk("Brut", pct(o.brut), TON[t.brut]) + bk("Net", pct(o.net), TON[t.net]) + bk("Cash-flow", sgn(o.cfNet), TON[t.cf]) + bk("Offre max", fmtN(o.offre / 1000, 0) + " k€", TON[t.offre]);
+  }
+  majVisBarre();
+}
+function majVisBarre(){ $("#barre-kpi").classList.toggle("hide", !(vue === "analyse" && barreO && !synVisible)); }
+
 function rendreResultats(){
-  const b = bienCourant(); const box = $("#resultats");
-  if(!b || !box) return;
-  const o = calc(b);
+  const b0 = bienCourant(), box = $("#resultats"), syn = $("#synthese");
+  if(!b0 || !box || !syn) return;
+  const b = bienSimule(b0), o = calc(b);
   // placeholders des valeurs estimées
   const ph = { loyer: o.loyerMarche ? "≈ " + fmtN(o.loyerMarche) + " (estimé)" : "à saisir", copro: "≈ " + fmtN(o.coproEst ? o.coproTotal : 30 * (+b.surface || 0)) + " (estimé)", tf: "≈ " + fmtN(o.loyer) + " (estimé)" };
   document.querySelectorAll("[data-est]").forEach(el => el.placeholder = ph[el.dataset.est] || "");
-  if(!o.ok){ box.innerHTML = '<div class="carte note">Saisis au moins le <b>prix</b> et la <b>surface</b> pour lancer le calcul.</div>'; return; }
-  const C = 2 * Math.PI * 42, part = o.score / 100;
-  let h = '<div class="carte"><div class="score"><div class="anneau"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="none" stroke="var(--carte2)" stroke-width="9"/><circle cx="48" cy="48" r="42" fill="none" stroke="' + o.couleur + '" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + (C * part) + ' ' + C + '"/></svg><div class="v"><div><b>' + o.score + '</b><small>/ 100</small></div></div></div>' +
-    '<div><div class="verdict" style="color:' + o.couleur + '">' + o.verdict[0] + '</div><div class="verdict-s">' + o.verdict[1] + '</div></div></div>' +
-    '<div class="kpis">' +
-      kpi("Rendement brut", pct(o.brut), "frais compris · annonce : " + pct(o.brutAnnonce), o.brut >= P.objectif / 100) +
-      kpi("Rendement net", pct(o.net), "après charges et vacance", P.base === "nette" && o.net >= P.objectif / 100) +
-      kpi("Net-net", pct(o.netNet), "après impôt, 1re année") +
-      kpi("Cash-flow", sgn(o.cfNet) + "/m", P.credit ? "crédit " + fmtN(P.duree) + " ans, après impôt" : "sans crédit, après impôt") +
-    '</div></div>';
-  // offre
-  h += '<h2>Offre maximale pour ' + fmtN(P.objectif, 1) + ' % ' + (P.base === "nette" ? "net" : "brut") + '</h2><div class="carte"><div class="offre"><div><div class="gros">' + eur(Math.round(o.offre / 500) * 500) + '</div><div class="note">prix vendeur, frais de notaire' + (o.travaux || o.mobilier ? ", travaux et mobilier" : "") + ' en plus</div></div>' +
-    '<div style="text-align:right"><div class="num" style="font-size:17px;color:' + (o.nego <= 0 ? "var(--bon)" : o.nego <= 0.1 ? "var(--moyen)" : "var(--mauvais)") + '">' + (o.nego <= 0 ? "Déjà atteint" : "−" + pct(o.nego, 0)) + '</div><div class="note">' + (o.nego <= 0 ? "marge : " + eur(o.offre - b.prix) : "à négocier (" + eur(b.prix - o.offre) + ")") + '</div></div></div>' +
-    '<table class="t" style="margin-top:10px"><tr><td class="note">Rendement visé</td><td class="r note">Prix max</td><td class="r note">vs affiché</td></tr>' +
+  majSim(b0, b, o);
+  if(!o.ok){ syn.innerHTML = '<div class="carte note">Saisis au moins le <b>prix</b> et la <b>surface</b> pour lancer le calcul.</div>'; box.innerHTML = ""; majBarre(null); return; }
+  syn.innerHTML = synthese(b, o);
+  majBarre(o);
+  // prix maximal selon le rendement visé
+  let h = '<h2>Prix max selon le rendement ' + (P.base === "nette" ? "net" : "brut") + '</h2><div class="carte">' +
+    '<table class="t"><tr><td class="note">Rendement visé</td><td class="r note">Prix max</td><td class="r note">vs ' + (simNego ? "simulé" : "affiché") + '</td></tr>' +
     [6, 7, 8, 10, 12].map(t => { const pm = o.prixMax(t / 100); return '<tr' + (t === P.objectif ? ' class="tot"' : "") + '><td>' + t + ' %</td><td class="r">' + eur(Math.round(pm / 500) * 500) + '</td><td class="r">' + (b.prix ? (pm >= b.prix ? "+" : "−") + pct(Math.abs(pm / b.prix - 1), 0) : "") + '</td></tr>'; }).join("") +
-    '</table></div>';
+    '</table><div class="note" style="margin-top:6px">Prix vendeur ; frais de notaire' + (o.travaux || o.mobilier ? ", travaux et mobilier" : "") + ' en plus.</div></div>';
   // alertes
-  if(o.alertes.length) h += '<h2>Points d\'attention</h2><div class="carte">' + o.alertes.map(([c, t]) => '<div class="alerte"><div class="ic" style="background:' + c + '">!</div><div>' + esc(t) + '</div></div>').join("") + '</div>';
-  // détail du score
+  if(o.alertes.length) h += '<h2 id="alertes">Points d\'attention</h2><div class="carte">' + o.alertes.map(([c, t]) => '<div class="alerte"><div class="ic" style="background:' + c + '">!</div><div>' + esc(t) + '</div></div>').join("") + '</div>';  // détail du score
   h += '<h2>Détail du score</h2><div class="carte">' + o.parts.map(x => '<div class="crit"><span>' + x.n + '</span><span class="p">' + fmtN(x.p, 0) + ' / ' + x.m + '</span><div class="barre" style="grid-column:1/-1"><i style="width:' + (x.p / x.m * 100) + '%;background:' + couleurScore(x.p / x.m * 100) + '"></i></div></div>').join("") +
     (b.dpe === "G" && !o.travaux ? '<div class="note">Score plafonné à 35 : DPE G sans travaux prévus.</div>' : "") + '</div>';
   // détails chiffrés
@@ -908,8 +1152,86 @@ function rendreResultats(){
     '</table></details></div>';
   box.innerHTML = h;
 }
-const kpi = (l, v, d, bon) => '<div class="kpi"><div class="l">' + l + '</div><div class="v"' + (bon ? ' style="color:var(--bon)"' : "") + '>' + v + '</div><div class="d">' + d + '</div></div>';
+
 const ligne = (l, v, tot) => '<tr' + (tot ? ' class="tot"' : "") + '><td>' + l + '</td><td class="r">' + v + '</td></tr>';
+
+/* ---------------- fiche PDF pour la banque ----------------
+   Pas de score ni de verdict : seulement les faits et le plan de financement.
+   Si une négociation est simulée, c'est ce prix qui est présenté. */
+function ficheBanque(b0){
+  const b = bienSimule(b0), o = calc(b);
+  if(!o.ok) return null;
+  const T = (titre, lignes) => '<h2>' + titre + '</h2><table>' + lignes.filter(Boolean).map(([l, v, tot]) => '<tr' + (tot ? ' class="tot"' : "") + '><td>' + l + '</td><td>' + (/^[−+\d]/.test(v) ? v : '<span style="font-family:var(--sans)">' + v + '</span>') + '</td></tr>').join("") + '</table>';
+  const est = x => x ? " (estimation)" : "";
+  const n = P.duree * 12, coutCredit = P.credit ? o.mens * n - o.emprunt : 0;
+  const loyerBanque = o.loyer * 0.7;
+  let h = '<div class="imp-tete"><div><div class="imp-sur">Projet d\'investissement locatif</div><h1>' + esc(b.titre || "Bien") + '</h1>' +
+    '<div class="imp-sous">' + esc([b.type === "maison" ? "Maison" : "Appartement", b.surface ? fmtN(b.surface) + " m²" : "", b.pieces ? fmtN(b.pieces) + " pièces" : "", [b.cp, b.ville].filter(Boolean).join(" ")].filter(Boolean).join(" · ")) + '</div>' +
+    (b.url ? '<div class="imp-url">' + esc(b.url) + '</div>' : "") + '</div>' +
+    '<div class="imp-date">' + new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" }) + '</div></div>';
+  h += '<div class="imp-kpis">' + [["Coût total de l'opération", eur(o.cout)], ["Montant emprunté", eur(o.emprunt)], ["Mensualité", P.credit ? eur(o.mens) : "–"],
+    ["Loyer mensuel HC", eur(o.loyer)], ["Rendement brut", pct(o.brut)], ["Cash-flow après impôt", sgn(o.cfNet) + " / mois"]]
+    .map(([l, v]) => '<div><span>' + l + '</span><b>' + v + '</b></div>').join("") + '</div>';
+  h += '<div class="imp-2col"><div>' + T("Le bien", [
+      ["Type", b.type === "maison" ? "Maison" : "Appartement"],
+      ["Surface habitable", fmtN(b.surface) + " m²"],
+      b.pieces ? ["Pièces", fmtN(b.pieces)] : null,
+      ["DPE", b.dpe || "non communiqué"],
+      ["Location", b.meuble ? "meublée (LMNP)" : "nue"],
+      ["Prix au m²", eur(o.prixM2)],
+      o.prixM2Ref ? ["Prix de marché au m² (DVF)", eur(o.prixM2Ref)] : null,
+      o.ecartPrix != null ? ["Écart au marché", (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0)] : null
+    ]) + '</div><div>' + T("Plan de financement", [
+      ["Prix d'achat" + (simNego && simPour === b0.id ? " (négocié)" : ""), eur(b.prix)],
+      ["Frais de notaire (" + fmtN(o.notairePct, 1) + " %)", eur(o.frais)],
+      o.travaux ? ["Travaux", eur(o.travaux)] : null,
+      o.mobilier ? ["Mobilier", eur(o.mobilier)] : null,
+      ["Coût total", eur(o.cout), true],
+      ["Apport personnel", eur(o.apport)],
+      ["Montant emprunté", eur(o.emprunt), true],
+      P.credit ? ["Durée, taux nominal", fmtN(P.duree) + " ans, " + fmtN(P.taux, 2) + " %"] : null,
+      P.credit ? ["Assurance emprunteur", fmtN(P.assurance, 2) + " % / an"] : null,
+      P.credit ? ["Mensualité assurance comprise", eur(o.mens), true] : null,
+      P.credit ? ["Coût total du crédit", eur(coutCredit)] : null
+    ]) + '</div></div>';
+  h += '<div class="imp-2col"><div>' + T("Revenus et charges par an", [
+      ["Loyer mensuel hors charges" + est(o.loyerEstime), eur(o.loyer)],
+      ["Loyers annuels", eur(o.loyerAn)],
+      ["Vacance locative (" + fmtN(P.vacance, 1) + " %)", "−" + eur(o.vacance)],
+      ["Taxe foncière" + est(o.tfEst), "−" + eur(o.tf)],
+      o.coproProprio ? ["Copropriété non récupérable" + est(o.coproEst), "−" + eur(o.coproProprio)] : null,
+      ["Assurance propriétaire (PNO)", "−" + eur(o.pno)],
+      ["Entretien (" + fmtN(P.entretien, 1) + " %)", "−" + eur(o.entretien)],
+      o.gestion ? ["Gestion locative (" + fmtN(P.gestion, 1) + " %)", "−" + eur(o.gestion)] : null,
+      o.gli ? ["Garantie loyers impayés", "−" + eur(o.gli)] : null,
+      ["Revenu net avant crédit et impôt", eur(o.revenuNet), true]
+    ]) + '</div><div>' + T("Rentabilité et équilibre", [
+      ["Rendement brut (loyers / coût total)", pct(o.brut)],
+      ["Rendement net de charges", pct(o.net)],
+      ["Rendement net d'impôt", pct(o.netNet)],
+      ["Régime fiscal envisagé", '<span style="font-family:var(--sans);white-space:normal">' + esc(o.regime.split(" (")[0]) + '</span>'],
+      P.credit ? ["70 % du loyer / mensualité", eur(loyerBanque) + " / " + eur(o.mens)] : null,
+      P.credit ? ["Mensualité couverte par 70 % du loyer", pct(o.mens ? loyerBanque / o.mens : 0, 0), true] : null,
+      ["Cash-flow mensuel avant impôt", sgn(o.cf)],
+      ["Cash-flow mensuel après impôt", sgn(o.cfNet), true]
+    ]) + '</div></div>';
+  const src = [o.ref && o.ref.src ? "références de marché : " + o.ref.src : "",
+    o.loyerEstime ? "loyer estimé d'après le loyer de marché de la commune" : "",
+    o.tfEst || o.coproEst ? "taxe foncière et charges de copropriété estimées en l'absence de montant communiqué" : ""].filter(Boolean);
+  h += '<div class="imp-pied">Estimations établies le ' + new Date().toLocaleDateString("fr-FR") + ', impôt calculé pour la première année avec une tranche marginale de ' + fmtN(P.tmi) + ' %.' +
+    (src.length ? " Sources et hypothèses : " + esc(src.join(" ; ")) + "." : "") + '</div>';
+  return h;
+}
+function imprimerFiche(){
+  const b = bienCourant(); if(!b) return;
+  const h = ficheBanque(b);
+  if(!h){ toast("Il manque le prix ou la surface"); return; }
+  $("#impression").innerHTML = h;
+  const titre = document.title;
+  document.title = "Projet locatif - " + (b.titre || "bien").replace(/[\\/:*?"<>|]/g, "").slice(0, 60);
+  window.addEventListener("afterprint", () => { document.title = titre; }, { once:true });
+  window.print();
+}
 
 /* ---------------- réglages ---------------- */
 const REGL = [
@@ -1147,12 +1469,45 @@ document.addEventListener("click", async e => {
   if(a === "fermer-modal"){ if(e.target === el || el.tagName === "BUTTON") $("#modal").innerHTML = ""; return; }
   if(a === "analyser") analyserSaisie();
   else if(a === "coller"){
-    try { const t = await navigator.clipboard.readText(); $("#saisie").value = t; if(t.trim()) analyserSaisie(); }
+    try { const t = await navigator.clipboard.readText(); $("#saisie").value = t; if(t.trim()){ store.set("dernierPP", t.trim()); analyserSaisie(); } }
     catch(x){ toast("Accès au presse-papiers refusé : colle avec un appui long"); }
   }
-  else if(a === "vierge"){ const b = nouveauBien({ titre:"Nouveau bien", ville:"Villefranche-sur-Saône", cp:"69400" }); biens.unshift(b); sauverB(); courant = b.id; store.set("courant", courant); derniereLecture = null; allerVue("analyse"); }
-  else if(a === "ouvrir"){ courant = el.dataset.id; store.set("courant", courant); derniereLecture = null; allerVue("analyse"); }
+  else if(a === "vierge"){ const b = nouveauBien({ titre:"Nouveau bien" }); biens.unshift(b); sauverB(); courant = b.id; store.set("courant", courant); derniereLecture = null; allerVue("analyse"); }
+  else if(a === "ouvrir" && modeComp && vue === "biens"){
+    const id = el.dataset.id, i = selComp.indexOf(id);
+    if(i >= 0) selComp.splice(i, 1);
+    else if(selComp.length >= 3){ toast("3 biens au maximum"); return; }
+    else selComp.push(id);
+    rendreBiens();
+  }
+  else if(a === "ouvrir" || a === "ouvrir-comp"){ courant = el.dataset.id; store.set("courant", courant); derniereLecture = null; allerVue("analyse"); }
+  else if(a === "mode-comp"){ modeComp = !modeComp; if(!modeComp) selComp = []; rendreBiens(); }
+  else if(a === "lancer-comp") allerVue("comparer");
+  else if(a === "pdf") imprimerFiche();
   else if(a === "vue-biens") allerVue("biens");
+  else if(a === "suppr-bien"){
+    const i = biens.findIndex(x => x.id === el.dataset.id); if(i < 0) return;
+    const b = biens.splice(i, 1)[0]; sauverB();
+    if(courant === b.id){ courant = biens[0] ? biens[0].id : null; store.set("courant", courant); }
+    rendreBiens();
+    const nom = (b.titre || "Bien").slice(0, 28);
+    toast("« " + nom + " » supprimé", { label:"Annuler", fn:() => { biens.splice(i, 0, b); sauverB(); rendre(); } });
+  }
+  else if(a === "haut") window.scrollTo({ top:0, behavior:"smooth" });
+  else if(a === "voir-alertes"){ const x = $("#alertes"); if(x) window.scrollTo({ top:x.getBoundingClientRect().top + scrollY - 110, behavior:"smooth" }); }
+  else if(a === "sim-offre"){
+    const b = bienCourant(); if(!b) return;
+    const o = calc(b);
+    if(o.nego <= 0){ toast("L'objectif est déjà atteint au prix affiché"); return; }
+    simNego = clamp(Math.ceil(o.nego * 100), 0, 30); simPour = b.id; rendreResultats();
+    if(o.nego > 0.3) toast("Offre max au-delà de −30 % : curseur au maximum");
+  }
+  else if(a === "sim-retenir"){
+    const b = bienCourant(); if(!b || !simNego) return;
+    const nv = bienSimule(b).prix, ancien = b.prix;
+    b.hist.push({ d:Date.now(), prix:ancien }); b.prix = nv; b.maj = Date.now(); simNego = 0; sauverB(); rendreAnalyse();
+    toast("Prix retenu : " + eur(nv), { label:"Annuler", fn:() => { b.prix = ancien; b.hist.pop(); sauverB(); rendreAnalyse(); } });
+  }
   else if(a === "supprimer"){
     const b = bienCourant(); if(!b) return;
     const i = biens.indexOf(b); biens.splice(i, 1); sauverB();
@@ -1188,6 +1543,26 @@ document.addEventListener("click", async e => {
   else if(a === "journal") journal();
 });
 document.addEventListener("keydown", e => { if(e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.id === "saisie") analyserSaisie(); });
+/* annonce copiée ailleurs : en revenant dans l'appli, on propose de l'analyser.
+   Seulement si le navigateur a déjà donné l'accès au presse-papiers (premier
+   usage du bouton « Coller ») : jamais de demande d'autorisation surprise. */
+async function verifierPressePapiers(){
+  if(document.visibilityState !== "visible" || !navigator.clipboard || !navigator.permissions) return;
+  try {
+    const p = await navigator.permissions.query({ name:"clipboard-read" });
+    if(p.state !== "granted") return;
+    const t = ((await navigator.clipboard.readText()) || "").trim();
+    if(!t || t.length > 30000 || t === store.get("dernierPP", "")) return;
+    const f = parseTexte(t);
+    if(!(f.prix && f.surface)) return;
+    store.set("dernierPP", t);
+    toast("Annonce copiée : " + [f.surface ? fmtN(f.surface) + " m²" : "", f.ville || "", eur(f.prix)].filter(Boolean).join(" · "), { label:"Analyser", fn:() => analyserSaisie(t) });
+  } catch(e){}
+}
+document.addEventListener("visibilitychange", verifierPressePapiers);
+window.addEventListener("focus", verifierPressePapiers);
+// coller une annonce suffit : l'analyse part toute seule
+document.addEventListener("paste", e => { if(e.target.id === "saisie") setTimeout(analyserSaisie, 0); });
 
 /* ---------------- démarrage ---------------- */
 $("#ver-chip").textContent = "v" + VERSION;
