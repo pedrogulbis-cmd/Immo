@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rendement">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Calcule la rentabilité d'un investissement locatif à partir d'une annonce Leboncoin ou SeLoger : rendement brut, net, net-net, cash-flow, offre maximale et score.">
+<title>Rendement — investissement locatif</title>
+<script>
+/* Manifeste construit ici même, comme dans CashFlow et Baby Name : adresses
+   complètes calculées d'après l'emplacement réel de la page (GitHub Pages,
+   sous-dossier…). share_target permet, une fois installée sur Android, de
+   recevoir un lien partagé depuis une autre appli. */
+(function(){
+  try {
+    var base = location.href.split("#")[0].split("?")[0].replace(/[^\/]*$/, "");
+    var man = {
+      name: "Rendement", short_name: "Rendement",
+      description: "Rentabilité locative d'une annonce : brut, net, cash-flow, offre max et score.",
+      lang: "fr", start_url: base, scope: base, id: base,
+      display: "standalone", orientation: "portrait",
+      background_color: "#f6f5f1", theme_color: "#ffffff",
+      icons: [
+        { src: base + "icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: base + "icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: base + "icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
+      ],
+      share_target: { action: base, method: "GET", params: { title: "title", text: "text", url: "url" } }
+    };
+    var l = document.createElement("link");
+    l.rel = "manifest";
+    l.href = URL.createObjectURL(new Blob([JSON.stringify(man)], { type: "application/manifest+json" }));
+    document.head.appendChild(l);
+  } catch(e){}
+})();
+</script>
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fond:#f6f5f1; --carte:#ffffff; --carte2:#f0eee8; --texte:#1b1d1c; --gris:#6c706d; --ligne:#e3e0d8;
+  --acc:#1f6f50; --acc-doux:#e3f0ea; --bon:#1f8a5b; --ok:#6a9a2a; --moyen:#c48a12; --mauvais:#c4442f;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace; --sans:"Inter Tight",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:14px; --ombre:0 1px 2px rgba(0,0,0,.04),0 2px 10px rgba(0,0,0,.04);
+}
+[data-theme="sombre"]{
+  --fond:#0f1110; --carte:#181b19; --carte2:#20241f; --texte:#ecefec; --gris:#9aa19c; --ligne:#2a2f2b;
+  --acc:#4fbf8d; --acc-doux:#1b3229; --bon:#45c08a; --ok:#9cc65a; --moyen:#e0a83a; --mauvais:#ec6f58;
+  --ombre:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fond);color:var(--texte);font-family:var(--sans);font-size:15px;-webkit-text-size-adjust:100%}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+.hide{display:none!important}
+.wrap{max-width:680px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:20;background:var(--fond);border-bottom:1px solid var(--ligne);padding-top:env(safe-area-inset-top)}
+header.top .wrap{display:flex;align-items:center;gap:10px;height:54px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--acc);display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
+.titre-app{font-weight:700;font-size:18px;letter-spacing:-.01em}
+.chip{font-family:var(--mono);font-size:11px;color:var(--gris);border:1px solid var(--ligne);border-radius:99px;padding:2px 8px;cursor:pointer;background:none}
+.esp{flex:1}
+.btn{border:1px solid var(--ligne);background:var(--carte);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:500;font-size:14px}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+[data-theme="sombre"] .btn.pri{color:#06120d}
+.btn.lien{border:none;background:none;color:var(--acc);padding:6px 4px}
+.btn.dang{color:var(--mauvais)}
+.btn.petit{padding:6px 10px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--gris);font-weight:600;margin:22px 0 8px}
+.carte{background:var(--carte);border:1px solid var(--ligne);border-radius:var(--r);padding:14px;box-shadow:var(--ombre)}
+.carte+.carte{margin-top:10px}
+.note{font-size:13px;color:var(--gris);line-height:1.55}
+.mono{font-family:var(--mono)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* barre d'onglets */
+nav.bas{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--carte);border-top:1px solid var(--ligne);padding-bottom:env(safe-area-inset-bottom)}
+nav.bas .wrap{display:flex}
+nav.bas button{flex:1;background:none;border:none;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:var(--gris);cursor:pointer}
+nav.bas button svg{width:22px;height:22px}
+nav.bas button.on{color:var(--acc);font-weight:600}
+
+/* import */
+.import textarea{width:100%;min-height:74px;border:1px solid var(--ligne);border-radius:10px;padding:10px 12px;background:var(--carte2);resize:vertical;font-size:14px}
+.import textarea:focus{outline:2px solid var(--acc);outline-offset:-1px}
+a.btn{color:var(--acc)}
+.retour{margin:10px 0;font-size:13px;line-height:1.55;border-radius:10px;padding:10px 12px;background:var(--acc-doux)}
+.retour.attention{background:color-mix(in srgb,var(--moyen) 15%,transparent)}
+.retour b{font-weight:600}
+
+/* liste des biens */
+.outils{display:flex;gap:8px;align-items:center;margin:14px 0 8px}
+.outils select{border:1px solid var(--ligne);background:var(--carte);border-radius:10px;padding:8px 10px;font-size:14px}
+.bien{display:flex;gap:12px;align-items:center;cursor:pointer}
+.bien .inf{flex:1;min-width:0}
+.bien .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bien .s{font-size:13px;color:var(--gris);margin-top:2px}
+.bien .k{display:flex;gap:12px;margin-top:6px;font-size:13px;flex-wrap:wrap}
+.bien .k span b{font-family:var(--mono);font-weight:500}
+.pastille{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:500;font-size:17px;color:#fff;flex:none}
+.statut{font-size:11px;border-radius:99px;padding:2px 8px;background:var(--carte2);color:var(--gris);margin-left:6px;vertical-align:1px;font-weight:500}
+.vide{text-align:center;padding:30px 10px}
+
+/* analyse */
+.score{display:flex;gap:16px;align-items:center}
+.anneau{position:relative;width:96px;height:96px;flex:none}
+.anneau svg{width:96px;height:96px;transform:rotate(-90deg)}
+.anneau .v{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.anneau .v b{font-family:var(--mono);font-size:28px;font-weight:500;line-height:1}
+.anneau .v small{display:block;font-size:11px;color:var(--gris);margin-top:2px}
+.verdict{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.verdict-s{font-size:13px;color:var(--gris);margin-top:3px;line-height:1.45}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.kpi{background:var(--carte2);border-radius:10px;padding:10px 12px}
+.kpi .l{font-size:12px;color:var(--gris)}
+.kpi .v{font-family:var(--mono);font-size:19px;margin-top:3px}
+.kpi .d{font-size:11px;color:var(--gris);margin-top:2px}
+.offre{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.offre .gros{font-family:var(--mono);font-size:24px}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t td{padding:7px 0;border-bottom:1px solid var(--ligne)}
+table.t tr:last-child td{border-bottom:none}
+table.t td.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+table.t tr.tot td{font-weight:600}
+table.t .est{color:var(--gris);font-style:italic;font-size:12px}
+.barre{height:6px;border-radius:9px;background:var(--carte2);overflow:hidden;margin-top:4px}
+.barre i{display:block;height:100%;border-radius:9px;background:var(--acc)}
+.crit{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin:8px 0 10px;font-size:13px}
+.crit .p{font-family:var(--mono);color:var(--gris)}
+.alerte{display:flex;gap:10px;font-size:13px;line-height:1.5;padding:8px 0;border-bottom:1px solid var(--ligne)}
+.alerte:last-child{border-bottom:none}
+.alerte .ic{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
+details.pli{margin-top:10px}
+details.pli summary{cursor:pointer;font-weight:600;font-size:14px;padding:4px 0;list-style:none}
+details.pli summary::before{content:"▸ ";color:var(--gris)}
+details.pli[open] summary::before{content:"▾ "}
+
+/* formulaire */
+.champs{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.champ{display:flex;flex-direction:column;gap:4px;min-width:0}
+.champ.large{grid-column:1/-1}
+.champ label{font-size:12px;color:var(--gris)}
+.champ .in{display:flex;align-items:center;border:1px solid var(--ligne);border-radius:10px;background:var(--carte2);overflow:hidden}
+.champ .in:focus-within{outline:2px solid var(--acc);outline-offset:-1px}
+.champ input,.champ select{flex:1;min-width:0;border:none;background:none;padding:9px 10px;font-size:15px;outline:none}
+.champ input::placeholder{color:var(--gris);opacity:.85;font-style:italic}
+.champ .u{padding:0 10px;color:var(--gris);font-size:13px;white-space:nowrap}
+.champ.trouve .in{border-color:var(--acc)}
+.bascule{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:6px 0}
+.bascule input{width:20px;height:20px;accent-color:var(--acc)}
+.lig{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.lig .l{flex:1}
+.lig .d{font-size:12px;color:var(--gris);margin-top:2px;line-height:1.45}
+.marche td input{width:100%;border:1px solid var(--ligne);background:var(--carte2);border-radius:8px;padding:6px 8px;font-size:14px}
+.marche td{padding:3px 3px}
+.marche th{font-size:11px;color:var(--gris);font-weight:500;text-align:left;padding:0 3px}
+.code{font-family:var(--mono);font-size:11px;word-break:break-all;background:var(--carte2);border-radius:8px;padding:8px;max-height:80px;overflow:auto;color:var(--gris)}
+a.favori{display:inline-block;background:var(--acc);color:#fff;text-decoration:none;border-radius:10px;padding:9px 14px;font-weight:600;font-size:14px}
+[data-theme="sombre"] a.favori{color:#06120d}
+ol.etapes{padding-left:20px;margin:6px 0;font-size:13px;line-height:1.6;color:var(--gris)}
+ol.etapes b{color:var(--texte);font-weight:600}
+
+#toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--texte);color:var(--fond);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:50;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px)}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+#toast .toast-act{background:none;border:none;color:var(--acc-doux);font-weight:600;cursor:pointer;padding:0}
+#modal .mdl-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:grid;place-items:center;padding:16px}
+#modal .mdl{background:var(--carte);border-radius:16px;max-width:520px;width:100%;max-height:80vh;overflow:auto;padding:18px}
+#modal h3{margin:0 0 4px}
+#modal .sous{color:var(--gris);font-size:13px;margin-bottom:10px}
+#modal ul{padding-left:18px;font-size:14px;line-height:1.55}
+@media (max-width:380px){ .champs{grid-template-columns:1fr} .kpi .v{font-size:17px} }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="logo">%</div><div class="titre-app">Rendement</div>
+  <button class="chip" id="ver-chip" data-act="journal"></button>
+  <div class="esp"></div>
+  <button class="btn petit hide" id="btn-installer" data-act="installer">Installer</button>
+</div></header>
+
+<main class="wrap">
+  <section id="v-biens"></section>
+  <section id="v-analyse" class="hide"></section>
+  <section id="v-reglages" class="hide"></section>
+</main>
+
+<nav class="bas"><div class="wrap">
+  <button data-vue="biens" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/></svg>Biens</button>
+  <button data-vue="analyse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12V3"/><path d="M12 12l6.4 6.4"/></svg>Analyse</button>
+  <button data-vue="reglages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Réglages</button>
+</div></nav>
+
+<div id="toast"></div>
+<div id="modal"></div>
+
+<script>
+"use strict";
+const VERSION = "1.0.0";
+const SCHEMA = 1;
+const JOURNAL = [
+  { v:"1.0.0", d:"2026-10-22", t:"Première version", l:[
+    "Reprise du fichier Excel : les 8 biens sont importés au premier lancement.",
+    "Calcul corrigé : frais de notaire (8 % dans l'ancien, Rhône), travaux et mobilier inclus dans le coût total.",
+    "Rendement brut, net de charges, net-net d'impôt, cash-flow mensuel avec crédit.",
+    "Offre maximale pour atteindre l'objectif (10 % par défaut) et négociation nécessaire.",
+    "Score sur 100 : rendement, cash-flow, prix vs marché, DPE, fiabilité du loyer.",
+    "Import d'annonce : favori « → Rendement » sur Leboncoin / SeLoger, ou texte collé.",
+    "Références marché par ville (prix et loyer au m²) modifiables.",
+    "Installable comme application (Android, iPhone, ordinateur), fonctionne hors ligne."
+  ]}
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const fmtN = (n, d = 0) => (isFinite(n) ? n : 0).toLocaleString("fr-FR", { minimumFractionDigits:d, maximumFractionDigits:d }).replace(/[  ]/g, " ");
+const eur = (n, d = 0) => fmtN(n, d) + " €";
+const pct = (x, d = 1) => fmtN(x * 100, d) + " %";
+const sgn = n => (n > 0 ? "+" : n < 0 ? "−" : "") + eur(Math.abs(n));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------------- stockage local ---------------- */
+const store = {
+  get(k, d){ try { const v = localStorage.getItem("rendement." + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem("rendement." + k, JSON.stringify(v)); } catch(e){} }
+};
+
+/* ---------------- paramètres ---------------- */
+/* Références marché : RealAdvisor, octobre 2026 (médianes appartements,
+   loyer annuel au m² ÷ 12). À ajuster avec tes propres relevés. */
+const MARCHE_DEFAUT = [
+  { ville:"Villefranche-sur-Saône", cp:"69400", prixM2:2566, loyerM2:14.4, src:"RealAdvisor oct. 2026" },
+  { ville:"Gleizé", cp:"69400", prixM2:2994, loyerM2:14.1, src:"RealAdvisor oct. 2026" },
+  { ville:"Dardilly", cp:"69570", prixM2:4662, loyerM2:21.2, src:"RealAdvisor oct. 2026" }
+];
+const P_DEFAUT = {
+  objectif:10, base:"brute",
+  notaire:8, coproNonRecup:30, vacance:4, entretien:5, gestion:0, gli:0, pno:150,
+  credit:true, apportMode:"frais", apportFixe:20000, taux:3.7, duree:20, assurance:0.30,
+  tmi:30, psFoncier:17.2, psLmnp:18.6, lmnp:"reel",
+  ajusterSurface:true, marche:MARCHE_DEFAUT
+};
+let P = Object.assign({}, P_DEFAUT, store.get("params", {}));
+if(!Array.isArray(P.marche)) P.marche = MARCHE_DEFAUT.slice();
+const sauverP = () => store.set("params", P);
+
+/* ---------------- biens ---------------- */
+/* Les 8 biens du fichier Calcul_rendement_immo.xlsx. Les biens 1 à 3 avaient un
+   loyer saisi ; pour les biens 4 à 8 le loyer était « loyer moyen m² × surface » :
+   il est laissé vide ici pour être estimé par l'appli. */
+const lbc = id => "https://www.leboncoin.fr/ad/ventes_immobilieres/" + id;
+const SEED = [
+  ["Bien 1", "Villefranche-sur-Saône", 115000, 36, 550, lbc(2783212145)],
+  ["Bien 2", "Villefranche-sur-Saône", 117000, 50, 650, lbc(2881154297)],
+  ["Bien 3", "Dardilly", 97000, 31, 610, lbc(2886898951)],
+  ["Bien 4", "Villefranche-sur-Saône", 129000, 81, null, lbc(2856593638)],
+  ["Bien 5", "Gleizé", 149000, 41, null, ""],
+  ["Bien 6", "Villefranche-sur-Saône", 139000, 57, null, lbc(2915489095)],
+  ["Bien 7", "Villefranche-sur-Saône", 149000, 66, null, lbc(2894950025)],
+  ["Bien 8", "Villefranche-sur-Saône", 150000, 42, null, ""]
+];
+function nouveauBien(o){
+  return Object.assign({
+    id:uid(), cree:Date.now(), maj:Date.now(), url:"", source:"", titre:"", type:"appartement",
+    ville:"", cp:"", prix:null, surface:null, pieces:null, dpe:"", loyer:null, meuble:false,
+    copro:null, tf:null, travaux:0, mobilier:0, neuf:false, statut:"à voir", note:"", hist:[]
+  }, o || {});
+}
+let biens = store.get("biens", null);
+if(!biens){
+  biens = SEED.map((s, i) => nouveauBien({ id:"xl" + (i + 1), titre:s[0] + " (fichier Excel)", ville:s[1], cp: s[1] === "Dardilly" ? "69570" : "69400",
+    prix:s[2], surface:s[3], loyer:s[4], url:s[5], source: s[5] ? "leboncoin" : "", cree:Date.now() - (8 - i) * 1000 }));
+  store.set("biens", biens);
+}
+store.set("schema", SCHEMA);
+const sauverB = () => store.set("biens", biens);
+let courant = store.get("courant", biens[0] ? biens[0].id : null);
+const bienCourant = () => biens.find(b => b.id === courant) || null;
+
+/* ---------------- calculs ---------------- */
+function refMarche(b){
+  const v = norm(b.ville);
+  if(!v) return null;
+  return P.marche.find(m => norm(m.ville) === v)
+      || P.marche.find(m => { const n = norm(m.ville); return n && (v.startsWith(n) || n.startsWith(v)); })
+      || null;
+}
+function calc(b){
+  const o = {};
+  const s = +b.surface || 0, prix = +b.prix || 0, obj = P.objectif / 100;
+  o.ok = prix > 0 && s > 0;
+  o.ref = refMarche(b);
+  // les petites surfaces se louent plus cher au m², les grandes moins cher
+  o.coefS = P.ajusterSurface && s ? clamp(Math.pow(45 / s, 0.2), 0.8, 1.25) : 1;
+  o.loyerMarche = o.ref && s ? o.ref.loyerM2 * s * o.coefS * (b.meuble ? 1.1 : 1) : null;
+  o.loyerEstime = b.loyer == null || b.loyer === "";
+  o.loyer = !o.loyerEstime ? +b.loyer : (o.loyerMarche || 0);
+  o.notairePct = b.neuf ? 2.5 : +P.notaire;
+  o.frais = prix * o.notairePct / 100;
+  o.travaux = +b.travaux || 0; o.mobilier = +b.mobilier || 0;
+  o.cout = prix + o.frais + o.travaux + o.mobilier;
+  o.loyerAn = o.loyer * 12;
+  o.brutAnnonce = prix ? o.loyerAn / prix : 0;        // la formule du fichier Excel
+  o.brut = o.cout ? o.loyerAn / o.cout : 0;           // brut sur le coût réel
+  // charges du propriétaire
+  o.tfEst = b.tf == null || b.tf === "";
+  o.tf = !o.tfEst ? +b.tf : o.loyer;                  // à défaut : ≈ un mois de loyer
+  o.coproEst = b.copro == null || b.copro === "";
+  o.coproTotal = !o.coproEst ? +b.copro : (b.type === "maison" ? 0 : 30 * s);
+  o.coproProprio = o.coproTotal * P.coproNonRecup / 100;
+  o.vacance = o.loyerAn * P.vacance / 100;
+  o.gestion = o.loyerAn * P.gestion / 100;
+  o.entretien = o.loyerAn * P.entretien / 100;
+  o.gli = o.loyerAn * P.gli / 100;
+  o.pno = +P.pno || 0;
+  o.charges = o.tf + o.coproProprio + o.pno + o.gestion + o.entretien + o.gli;
+  o.encaisse = o.loyerAn - o.vacance;
+  o.revenuNet = o.encaisse - o.charges;
+  o.net = o.cout ? o.revenuNet / o.cout : 0;
+  // crédit
+  o.apport = !P.credit ? o.cout : P.apportMode === "frais" ? Math.min(o.cout, o.frais) : P.apportMode === "zero" ? 0 : Math.min(o.cout, +P.apportFixe || 0);
+  o.emprunt = P.credit ? Math.max(0, o.cout - o.apport) : 0;
+  const r = P.taux / 100 / 12, n = Math.max(1, P.duree * 12);
+  o.mensCredit = o.emprunt ? (r ? o.emprunt * r / (1 - Math.pow(1 + r, -n)) : o.emprunt / n) : 0;
+  o.mensAss = o.emprunt * P.assurance / 100 / 12;
+  o.mens = o.mensCredit + o.mensAss;
+  let cap = o.emprunt, it = 0;
+  for(let i = 0; i < 12 && cap > 0; i++){ const x = cap * r; it += x; cap -= o.mensCredit - x; }
+  o.interets1 = it;
+  // impôt (première année, approximation)
+  if(b.meuble){
+    o.ps = P.psLmnp;
+    if(P.lmnp === "micro"){ o.regime = "LMNP micro-BIC (abattement 50 %)"; o.baseImp = o.encaisse * 0.5; }
+    else { o.regime = "LMNP au réel (amortissements ≈ pas d'impôt les premières années)"; o.baseImp = 0; }
+  } else {
+    o.ps = P.psFoncier;
+    const micro = o.encaisse * 0.7;
+    const reel = Math.max(0, o.encaisse - o.charges - it - o.mensAss * 12);
+    if(o.encaisse > 15000 || reel < micro){ o.regime = "Foncier au réel (charges et intérêts déduits)"; o.baseImp = reel; }
+    else { o.regime = "Micro-foncier (abattement 30 %)"; o.baseImp = micro; }
+  }
+  o.impot = o.baseImp * (P.tmi + o.ps) / 100;
+  o.netNet = o.cout ? (o.revenuNet - o.impot) / o.cout : 0;
+  o.cf = o.revenuNet / 12 - o.mens;
+  o.cfNet = o.cf - o.impot / 12;
+  // marché
+  o.prixM2 = s ? prix / s : 0;
+  o.ecartPrix = o.ref && o.ref.prixM2 && s ? o.prixM2 / o.ref.prixM2 - 1 : null;
+  o.ratioLoyer = (!o.loyerEstime && o.loyerMarche) ? o.loyer / o.loyerMarche : null;
+  // prix d'achat maximal (frais de notaire, travaux, mobilier compris) pour un rendement visé
+  const rev = P.base === "nette" ? o.revenuNet : o.loyerAn;
+  o.prixMax = t => Math.max(0, (rev / t - o.travaux - o.mobilier) / (1 + o.notairePct / 100));
+  o.offre = o.prixMax(obj);
+  o.nego = prix ? 1 - o.offre / prix : 0;
+  o.rendObj = P.base === "nette" ? o.net : o.brut;
+  // score
+  const lo = obj * 0.5;
+  const dpeP = { A:15, B:15, C:15, D:12, E:7, F:2, G:0 };
+  o.parts = [
+    { n:"Rendement " + (P.base === "nette" ? "net" : "brut") + " vs objectif " + fmtN(P.objectif, 1) + " %", p: clamp((o.rendObj - lo) / (obj - lo), 0, 1) * 40, m:40 },
+    { n:"Cash-flow après crédit et impôt", p: clamp((o.cfNet + 150) / 250, 0, 1) * 20, m:20 },
+    { n:"Prix au m² vs marché", p: o.ecartPrix == null ? 7.5 : clamp((0.15 - o.ecartPrix) / 0.35, 0, 1) * 15, m:15 },
+    { n:"DPE", p: b.dpe && dpeP[b.dpe] != null ? dpeP[b.dpe] : 7, m:15 },
+    { n:"Fiabilité du loyer", p: o.loyerEstime ? 6 : o.ratioLoyer == null ? 7 : clamp((1.3 - o.ratioLoyer) / 0.3, 0, 1) * 10, m:10 }
+  ];
+  o.score = Math.round(o.parts.reduce((a, x) => a + x.p, 0));
+  if(b.dpe === "G" && !o.travaux) o.score = Math.min(o.score, 35);
+  if(!o.ok) o.score = 0;
+  o.verdict = o.score >= 75 ? ["Fonce", "Coche les cases de ton objectif. Vérifie les charges réelles et visite."]
+            : o.score >= 60 ? ["À négocier", "Intéressant si le prix baisse ou si le loyer se confirme."]
+            : o.score >= 45 ? ["Moyen", "Loin de l'objectif en l'état : il faudrait une vraie baisse de prix."]
+            : ["Passe ton chemin", "Ne colle pas à l'objectif de rendement."];
+  o.couleur = couleurScore(o.score);
+  o.alertes = alertes(b, o);
+  return o;
+}
+function couleurScore(s){ return s >= 75 ? "var(--bon)" : s >= 60 ? "var(--ok)" : s >= 45 ? "var(--moyen)" : "var(--mauvais)"; }
+function alertes(b, o){
+  const a = [], R = "var(--mauvais)", M = "var(--moyen)", I = "var(--gris)";
+  if(!o.ok){ a.push([I, "Il manque le prix ou la surface pour calculer."]); return a; }
+  if(b.dpe === "G") a.push([R, "DPE G : location interdite pour tout nouveau bail depuis le 1er janvier 2025. Travaux de rénovation obligatoires avant de louer (à chiffrer dans « Travaux »)."]);
+  else if(b.dpe === "F") a.push([M, "DPE F : interdit à la location pour tout nouveau bail à partir du 1er janvier 2028. Prévois les travaux."]);
+  else if(b.dpe === "E") a.push([M, "DPE E : interdit à la location à partir du 1er janvier 2034."]);
+  else if(!b.dpe) a.push([I, "DPE inconnu : à demander (compté comme neutre dans le score)."]);
+  if(o.loyerEstime) a.push([M, o.ref ? "Loyer estimé d'après le marché (" + fmtN(o.ref.loyerM2, 1) + " €/m²" + (o.coefS !== 1 ? ", ajusté à la surface" : "") + ") : vérifie avec des annonces de location comparables." : "Pas de loyer : saisis-le, ou ajoute la ville dans Réglages → Marché pour l'estimer."]);
+  else if(o.ratioLoyer && o.ratioLoyer > 1.15) a.push([M, "Loyer saisi " + pct(o.ratioLoyer - 1, 0) + " au-dessus du marché estimé (" + eur(o.loyerMarche) + ") : risque de vacance ou de surestimation."]);
+  if(!o.ref) a.push([I, "Pas de référence marché pour « " + (b.ville || "ville inconnue") + " » : ajoute-la dans Réglages → Marché."]);
+  if(o.tfEst || (o.coproEst && b.type !== "maison")) a.push([I, "Estimé faute d'info : " + [o.tfEst ? "taxe foncière (≈ 1 mois de loyer)" : "", o.coproEst && b.type !== "maison" ? "charges de copro (≈ 30 €/m²/an)" : ""].filter(Boolean).join(", ") + ". À demander au vendeur."]);
+  if(o.ecartPrix != null && o.ecartPrix < -0.25) a.push([M, "Prix " + pct(-o.ecartPrix, 0) + " sous le marché : cherche pourquoi (travaux, copro en difficulté, rez-de-chaussée, bruit, bien occupé…)."]);
+  if(o.ecartPrix != null && o.ecartPrix > 0.10) a.push([M, "Prix " + pct(o.ecartPrix, 0) + " au-dessus du marché du secteur."]);
+  if(o.nego > 0.15) a.push([R, "Il faudrait négocier " + pct(o.nego, 0) + " pour atteindre " + fmtN(P.objectif, 1) + " % : rarement réaliste."]);
+  if(+b.surface < 9) a.push([R, "Moins de 9 m² : logement non décent, impossible à louer comme résidence principale."]);
+  if(!b.meuble && o.encaisse > 15000) a.push([I, "Loyers > 15 000 €/an : micro-foncier impossible, régime réel obligatoire."]);
+  return a;
+}
+
+/* ---------------- lecture d'annonce ---------------- */
+const SP = "[\\s\\u00a0\\u202f]";
+const MONT = "(\\d{1,3}(?:[ \\u00a0\\u202f.]\\d{3})+|\\d+)(?:,\\d+)?";
+const argent = s => parseFloat(String(s).replace(/[\s  .]/g, "").replace(",", "."));
+const decimal = s => parseFloat(String(s).replace(/[\s  ]/g, "").replace(",", "."));
+function sourceDe(u){
+  const h = String(u || "").toLowerCase();
+  return h.includes("leboncoin") ? "leboncoin" : h.includes("seloger") ? "seloger" : h.includes("bienici") ? "bienici"
+       : h.includes("pap.fr") ? "pap" : h.includes("logic-immo") ? "logic-immo" : h.includes("figaro") ? "figaro immobilier" : h ? "web" : "";
+}
+function parseTexte(txt){
+  const t = String(txt || "").replace(/\r/g, "");
+  const f = {};
+  let m;
+  // prix : d'abord un libellé « Prix », sinon le premier montant plausible qui n'est ni un €/m², ni un loyer, ni des charges
+  if((m = t.match(new RegExp("prix(?:\\s+de\\s+vente)?(?:\\s+FAI)?\\s*:?\\s*" + MONT + SP + "?€", "i")))) { const v = argent(m[1]); if(v >= 10000 && v <= 5e6) f.prix = v; }
+  if(f.prix == null){
+    const re = new RegExp(MONT + SP + "?€", "g");
+    while((m = re.exec(t))){
+      const v = argent(m[1]);
+      const apres = t.slice(re.lastIndex, re.lastIndex + 14), avant = t.slice(Math.max(0, m.index - 40), m.index);
+      if(v < 15000 || v > 5e6) continue;
+      if(/^\s*(\/|par)\s*(m|mois|an)/i.test(apres) || /^\s*(cc|hc)\b/i.test(apres)) continue;
+      if(/(charges?|taxe|loyer|frais|honoraires|budget|quote)[^\n]{0,30}$/i.test(avant)) continue;
+      f.prix = v; break;
+    }
+  }
+  // surface habitable (pas le terrain)
+  if((m = t.match(/(?:surface(?:\s+habitable)?|superficie(?:\s+habitable)?|surface\s+loi\s+carrez)\s*:?\s*(\d+(?:[.,]\d+)?)\s*m(?:²|2)/i))) f.surface = decimal(m[1]);
+  if(f.surface == null){
+    const re = /(\d+(?:[.,]\d+)?)\s*m(?:²|2)(?![\w\/])/g;
+    while((m = re.exec(t))){
+      const v = decimal(m[1]), avant = t.slice(Math.max(0, m.index - 25), m.index);
+      if(v < 9 || v > 1000 || /terrain|jardin|parcelle|€/i.test(avant)) continue;
+      f.surface = v; break;
+    }
+  }
+  if((m = t.match(/nombre\s+de\s+pi[eè]ces\s*:?\s*(\d+)/i)) || (m = t.match(/(\d+)\s*pi[eè]ces?\b/i)) || (m = t.match(/\b[TF](\d)\b/))) f.pieces = +m[1];
+  if(/\bstudio\b/i.test(t) && !f.pieces) f.pieces = 1;
+  const im = t.search(/\b(maison|villa|pavillon)\b/i), ia = t.search(/\b(appartement|studio|duplex|loft|T\d)\b/i);
+  if(im >= 0 || ia >= 0) f.type = (im >= 0 && (ia < 0 || im < ia)) ? "maison" : "appartement";
+  if((m = t.match(/(?:classe\s+[ée]nergie|DPE|performance\s+[ée]nerg[ée]tique|[ée]tiquette\s+[ée]nergie|consommation\s+[ée]nerg[ée]tique)\s*(?:\(?DPE\)?)?\s*:?\s*(?:classe\s*)?\(?([A-G])\b(?![a-zà-ÿ'])/i))) f.dpe = m[1].toUpperCase();
+  // charges de copropriété (annuelles)
+  if((m = t.match(new RegExp("quote[- ]part[^\\n€]{0,80}?" + MONT + SP + "?€", "i")))) f.copro = argent(m[1]);
+  else if((m = t.match(new RegExp("charges?(?:\\s+de\\s+copro\\w*)?(?:\\s+courantes)?\\s*(?:annuelles?|par\\s+an|\\/\\s?an)\\s*:?[^\\d€\\n]{0,20}" + MONT + SP + "?€", "i")))) f.copro = argent(m[1]);
+  else if((m = t.match(new RegExp("charges?(?:\\s+de\\s+copro\\w*)?[^\\d€\\n]{0,25}" + MONT + SP + "?€\\s*(?:\\/|par)\\s*(mois|an)", "i")))) f.copro = argent(m[1]) * (/mois/i.test(m[2]) ? 12 : 1);
+  else if((m = t.match(new RegExp(MONT + SP + "?€\\s*(?:de\\s+)?charges?\\s*(annuelles?|par\\s+an|\\/\\s?an|mensuelles?|par\\s+mois|\\/\\s?mois)", "i")))) f.copro = argent(m[1]) * (/mois|mens/i.test(m[2]) ? 12 : 1);
+  if(f.copro != null && (f.copro < 20 || f.copro > 20000)) delete f.copro;
+  if((m = t.match(new RegExp("taxe\\s+fonci[eè]re[^\\d€\\n]{0,30}" + MONT + SP + "?€", "i")))) { const v = argent(m[1]); if(v > 50 && v < 10000) f.tf = v; }
+  if((m = t.match(new RegExp("(?:lou[ée]e?\\s+(?:actuellement\\s+)?(?:à|a|au\\s+prix\\s+de|pour)?|loyer(?:\\s+actuel)?(?:\\s+mensuel)?(?:\\s+hors\\s+charges|\\s+HC|\\s+CC)?\\s*:?|bail\\s+en\\s+cours[^\\d€\\n]{0,30})\\s*" + MONT + SP + "?€", "i")))) { const v = argent(m[1]); if(v >= 150 && v <= 6000) f.loyer = v; }
+  if(/\bmeubl[ée]e?\b/i.test(t) && !/non[- ]meubl/i.test(t)) f.meuble = true;
+  // ville et code postal
+  const reCp = /\(?\b((?:0[1-9]|[1-8]\d|9[0-5])\d{3})\b\)?/g;
+  while((m = reCp.exec(t))){
+    const ligneAv = t.slice(0, m.index).split("\n").pop();
+    const ligneAp = t.slice(reCp.lastIndex).split("\n")[0];
+    if(/€|m²|m2/.test(t.slice(reCp.lastIndex, reCp.lastIndex + 4))) continue;
+    let v = (ligneAv.match(/([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-](?:[Ss]ur|[Ss]ous|en|le|la|les|de|du|des|d'|l'|aux|[A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+))*)\s*[,(\-–]?\s*$/) || [])[1];
+    if(!v) v = (ligneAp.match(/^\s*[)\-–,]?\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-](?:[Ss]ur|[Ss]ous|en|le|la|les|de|du|des|[A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+))*)/) || [])[1];
+    if(v && !/^(Appartement|Maison|Studio|Prix|Vente|Achat|Bien|Charges)$/i.test(v)){ f.ville = v.trim(); f.cp = m[1]; break; }
+    if(!f.cp) f.cp = m[1];
+  }
+  const u = t.match(/https?:\/\/[^\s"'<>]+/);
+  if(u){ f.url = u[0].replace(/[).,;]+$/, ""); f.source = sourceDe(f.url); }
+  return f;
+}
+/* données structurées : Leboncoin (__NEXT_DATA__) et JSON-LD (SeLoger, Bien'ici…) */
+function parseLD(liste){
+  const f = {};
+  const visite = o => {
+    if(!o || typeof o !== "object") return;
+    if(Array.isArray(o)){ o.forEach(visite); return; }
+    if(o["@graph"]) visite(o["@graph"]);
+    const of = o.offers && (Array.isArray(o.offers) ? o.offers[0] : o.offers);
+    if(of && of.price && f.prix == null){ const v = argent(of.price); if(v >= 10000) f.prix = v; }
+    if(o.price && f.prix == null){ const v = argent(o.price); if(v >= 10000) f.prix = v; }
+    const fs = o.floorSize && (o.floorSize.value || o.floorSize);
+    if(fs && f.surface == null && !isNaN(decimal(fs))) f.surface = decimal(fs);
+    if(o.numberOfRooms && f.pieces == null) f.pieces = parseInt(o.numberOfRooms.value || o.numberOfRooms, 10) || null;
+    const ad = o.address || (o.itemOffered && o.itemOffered.address);
+    if(ad && typeof ad === "object"){ if(ad.addressLocality && !f.ville) f.ville = ad.addressLocality; if(ad.postalCode && !f.cp) f.cp = String(ad.postalCode); }
+    if(o.name && !f.titre && typeof o.name === "string" && o.name.length < 140) f.titre = o.name;
+    for(const k in o){ if(o[k] && typeof o[k] === "object" && k !== "offers" && k !== "address") visite(o[k]); }
+  };
+  (liste || []).forEach(s => { try { visite(JSON.parse(s)); } catch(e){} });
+  return f;
+}
+function parsePayload(d){
+  let f = {};
+  if(d.lbc){
+    const a = d.lbc;
+    if(a.s) f.titre = a.s;
+    const p = Array.isArray(a.p) ? a.p[0] : a.p;
+    if(p) f.prix = +p;
+    if(a.c) f.ville = a.c;
+    if(a.z) f.cp = String(a.z);
+    (a.at || []).forEach(([k, v, lab]) => {
+      if(k === "square" && v) f.surface = decimal(v);
+      else if(k === "rooms" && v) f.pieces = parseInt(v, 10);
+      else if(k === "real_estate_type") f.type = /maison/i.test(lab || "") || v === "1" ? "maison" : "appartement";
+      else if(k === "energy_rate" && /^[a-g]$/i.test(v || "")) f.dpe = v.toUpperCase();
+      else if(k === "furnished" && (v === "1" || /meubl/i.test(lab || ""))) f.meuble = true;
+    });
+    const fd = parseTexte(a.b || "");
+    for(const k of ["copro", "tf", "loyer", "dpe", "surface", "pieces", "meuble"]) if(f[k] == null && fd[k] != null) f[k] = fd[k];
+  }
+  const ld = parseLD(d.ld);
+  for(const k in ld) if(f[k] == null) f[k] = ld[k];
+  const tx = parseTexte(d.x || "");
+  for(const k in tx) if(f[k] == null && k !== "url") f[k] = tx[k];
+  if(!f.titre && d.t) f.titre = String(d.t).split(/[|–-]\s*(leboncoin|seloger|bien'ici)/i)[0].trim().slice(0, 120);
+  f.url = d.u || f.url || "";
+  f.source = sourceDe(d.h || f.url);
+  return f;
+}
+const LIBELLES = { prix:"prix", surface:"surface", pieces:"pièces", type:"type", dpe:"DPE", ville:"ville", cp:"code postal", copro:"charges copro", tf:"taxe foncière", loyer:"loyer", meuble:"meublé", titre:"titre" };
+const ESSENTIELS = ["prix", "surface", "ville", "dpe", "loyer", "copro", "tf"];
+
+/* applique ce qui a été lu : met à jour le bien de la même annonce, ou en crée un */
+function integrer(f, origine){
+  let b = f.url ? biens.find(x => x.url && x.url.split("?")[0] === f.url.split("?")[0]) : null;
+  const nouveau = !b;
+  if(!b){ b = nouveauBien(); biens.unshift(b); }
+  const trouves = [];
+  for(const k in f){
+    if(f[k] == null || f[k] === "" || k === "source" || k === "url") continue;
+    if(k === "prix" && b.prix && b.prix !== f.prix) b.hist.push({ d:Date.now(), prix:b.prix });
+    b[k] = f[k]; if(LIBELLES[k]) trouves.push(k);
+  }
+  if(f.url){ b.url = f.url; b.source = f.source || sourceDe(f.url); }
+  if(!b.titre) b.titre = [b.type === "maison" ? "Maison" : "Appartement", b.surface ? fmtN(b.surface) + " m²" : "", b.ville].filter(Boolean).join(" · ");
+  b.maj = Date.now();
+  sauverB();
+  courant = b.id; store.set("courant", courant);
+  derniereLecture = { trouves, manquants: ESSENTIELS.filter(k => !trouves.includes(k) && (b[k] == null || b[k] === "")), nouveau, origine, url:b.url };
+  return b;
+}
+let derniereLecture = null;
+
+function analyserSaisie(){
+  const txt = ($("#saisie") || {}).value || "";
+  const s = txt.trim();
+  if(!s){ toast("Colle un lien ou le texte d'une annonce"); return; }
+  const seulLien = /^https?:\/\/\S+$/.test(s);
+  if(seulLien){
+    const url = s.replace(/[).,;]+$/, "");
+    const b = integrer({ url, source:sourceDe(url) }, "lien");
+    derniereLecture.lienSeul = true;
+    allerVue("analyse");
+    return b;
+  }
+  const f = parseTexte(s);
+  if(f.prix == null && f.surface == null){ toast("Je n'ai trouvé ni prix ni surface dans ce texte"); return; }
+  integrer(f, "texte");
+  allerVue("analyse");
+}
+
+/* réception : favori (#import=…) ou partage Android (?url=&text=) */
+function recevoir(){
+  const h = location.hash;
+  if(h.startsWith("#import=")){
+    try {
+      const d = JSON.parse(decodeURIComponent(escape(atob(h.slice(8)))));
+      integrer(parsePayload(d), "favori");
+      history.replaceState(null, "", location.pathname + location.search);
+      allerVue("analyse");
+      return true;
+    } catch(e){ toast("Import illisible"); history.replaceState(null, "", location.pathname); }
+  }
+  const q = new URLSearchParams(location.search);
+  if(q.has("url") || q.has("text")){
+    const txt = [q.get("title"), q.get("text"), q.get("url")].filter(Boolean).join("\n");
+    const f = parseTexte(txt);
+    if(f.url || f.prix || f.surface){
+      integrer(f, "partage");
+      if(!f.prix || !f.surface) derniereLecture.lienSeul = true;
+    }
+    history.replaceState(null, "", location.pathname);
+    allerVue("analyse");
+    return true;
+  }
+  return false;
+}
+window.addEventListener("hashchange", () => { if(recevoir()) rendre(); });
+
+/* ---------------- favori « → Rendement » ---------------- */
+function appUrl(){ return location.href.split("#")[0].split("?")[0]; }
+function codeFavori(){
+  const c = "(function(){var A=" + JSON.stringify(appUrl()) + ";var d={u:location.href.split('#')[0].split('?')[0],h:location.hostname,t:document.title};" +
+    "try{var n=document.getElementById('__NEXT_DATA__');if(n){var j=JSON.parse(n.textContent),a=j&&j.props&&j.props.pageProps&&j.props.pageProps.ad;" +
+    "if(a){d.lbc={s:a.subject,p:a.price,b:(a.body||'').slice(0,5000),c:a.location&&a.location.city,z:a.location&&a.location.zipcode,at:(a.attributes||[]).map(function(x){return[x.key,x.value,x.value_label]})}}}}catch(e){}" +
+    "try{d.ld=[].slice.call(document.querySelectorAll('script[type=\"application/ld+json\"]')).map(function(s){return s.textContent.slice(0,4000)}).slice(0,6)}catch(e){}" +
+    "d.x=(document.body.innerText||'').slice(0,9000);" +
+    "var s=btoa(unescape(encodeURIComponent(JSON.stringify(d))));var w=window.open(A+'#import='+s,'_blank');if(!w)location.href=A+'#import='+s})();";
+  return "javascript:" + encodeURIComponent(c);
+}
+
+/* ---------------- vues ---------------- */
+let vue = "biens";
+let tri = store.get("tri", "score");
+function allerVue(v){
+  vue = v;
+  document.querySelectorAll("nav.bas button").forEach(b => b.classList.toggle("on", b.dataset.vue === v));
+  ["biens", "analyse", "reglages"].forEach(x => $("#v-" + x).classList.toggle("hide", x !== v));
+  rendre();
+  window.scrollTo(0, 0);
+}
+function rendre(){
+  if(vue === "biens") rendreBiens();
+  else if(vue === "analyse") rendreAnalyse();
+  else rendreReglages();
+}
+
+function blocImport(){
+  return '<div class="carte import"><textarea id="saisie" placeholder="Colle ici le lien d\'une annonce Leboncoin / SeLoger, ou tout le texte de l\'annonce (sélectionner tout → copier)"></textarea>' +
+    '<div class="btns"><button class="btn pri" data-act="analyser">Analyser</button><button class="btn" data-act="coller">Coller</button><button class="btn" data-act="vierge">Saisie manuelle</button></div></div>';
+}
+
+function rendreBiens(){
+  const l = biens.map(b => ({ b, o:calc(b) }));
+  const cle = { score: x => -x.o.score, renta: x => -x.o.rendObj, prix: x => +x.b.prix || 0, cf: x => -x.o.cfNet, recent: x => -x.b.maj };
+  l.sort((a, z) => cle[tri](a) - cle[tri](z));
+  let h = '<h2>Nouvelle annonce</h2>' + blocImport();
+  h += '<div class="outils"><h2 style="margin:0;flex:1">Mes biens · ' + biens.length + '</h2><select id="tri">' +
+    [["score","Meilleur score"],["renta","Rendement"],["cf","Cash-flow"],["prix","Prix"],["recent","Récents"]].map(([k, n]) => '<option value="' + k + '"' + (k === tri ? " selected" : "") + '>' + n + '</option>').join("") + '</select></div>';
+  if(!l.length) h += '<div class="carte vide note">Aucun bien pour l\'instant. Colle une annonce ci-dessus.</div>';
+  for(const { b, o } of l){
+    const baisse = b.hist && b.hist.length ? b.hist[0].prix - b.prix : 0;
+    h += '<div class="carte bien" data-act="ouvrir" data-id="' + b.id + '">' +
+      '<div class="pastille" style="background:' + (o.ok ? o.couleur : "var(--gris)") + '">' + (o.ok ? o.score : "–") + '</div>' +
+      '<div class="inf"><div class="t">' + esc(b.titre || "Sans titre") + (b.statut && b.statut !== "à voir" ? '<span class="statut">' + esc(b.statut) + '</span>' : "") + '</div>' +
+      '<div class="s">' + esc([b.ville, b.prix ? eur(b.prix) : "", b.surface ? fmtN(b.surface) + " m²" : "", b.dpe ? "DPE " + b.dpe : ""].filter(Boolean).join(" · ")) +
+      (baisse > 0 ? ' · <span style="color:var(--bon)">−' + eur(baisse) + '</span>' : "") + '</div>' +
+      (o.ok ? '<div class="k"><span>Brut <b>' + pct(o.brut) + '</b></span><span>Net <b>' + pct(o.net) + '</b></span><span>Cash-flow <b>' + sgn(o.cfNet) + '</b>/mois</span></div>' : "") +
+      '</div></div>';
+  }
+  $("#v-biens").innerHTML = h;
+  $("#tri").onchange = e => { tri = e.target.value; store.set("tri", tri); rendreBiens(); };
+}
+
+const CHAMPS = [
+  { g:"Annonce", l:[
+    { k:"titre", n:"Titre", t:"text", large:true },
+    { k:"url", n:"Lien de l'annonce", t:"text", large:true },
+    { k:"ville", n:"Ville", t:"text" }, { k:"cp", n:"Code postal", t:"text" },
+    { k:"type", n:"Type", t:"select", o:[["appartement","Appartement"],["maison","Maison"]] },
+    { k:"dpe", n:"DPE", t:"select", o:[["","Inconnu"],["A","A"],["B","B"],["C","C"],["D","D"],["E","E"],["F","F"],["G","G"]] },
+    { k:"prix", n:"Prix affiché (FAI)", t:"num", u:"€" }, { k:"surface", n:"Surface habitable", t:"num", u:"m²" },
+    { k:"pieces", n:"Pièces", t:"num" },
+    { k:"statut", n:"Suivi", t:"select", o:[["à voir","À voir"],["contacté","Contacté"],["visité","Visité"],["offre","Offre faite"],["écarté","Écarté"]] }
+  ]},
+  { g:"Loyer et charges", l:[
+    { k:"loyer", n:"Loyer mensuel hors charges", t:"num", u:"€/mois", est:"loyer" },
+    { k:"meuble", n:"Location meublée (LMNP)", t:"check" },
+    { k:"copro", n:"Charges de copro totales", t:"num", u:"€/an", est:"copro" },
+    { k:"tf", n:"Taxe foncière", t:"num", u:"€/an", est:"tf" }
+  ]},
+  { g:"Achat", l:[
+    { k:"travaux", n:"Travaux", t:"num", u:"€" }, { k:"mobilier", n:"Mobilier", t:"num", u:"€" },
+    { k:"neuf", n:"Neuf / VEFA (notaire ≈ 2,5 %)", t:"check" },
+    { k:"note", n:"Notes", t:"text", large:true }
+  ]}
+];
+function champHTML(c, b, trouves){
+  const v = b[c.k];
+  const cls = "champ" + (c.large ? " large" : "") + (trouves.includes(c.k) ? " trouve" : "");
+  if(c.t === "check") return '<div class="champ large"><label class="bascule"><span>' + c.n + '</span><input type="checkbox" data-k="' + c.k + '"' + (v ? " checked" : "") + '></label></div>';
+  if(c.t === "select") return '<div class="' + cls + '"><label>' + c.n + '</label><div class="in"><select data-k="' + c.k + '">' + c.o.map(([k, n]) => '<option value="' + esc(k) + '"' + (String(v || "") === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select></div></div>';
+  return '<div class="' + cls + '"><label>' + c.n + '</label><div class="in"><input ' + (c.t === "num" ? 'inputmode="decimal" ' : "") + 'data-k="' + c.k + '" data-t="' + c.t + '" value="' + esc(v == null ? "" : (c.t === "num" ? String(v).replace(".", ",") : v)) + '"' + (c.est ? ' data-est="' + c.est + '"' : "") + '>' + (c.u ? '<span class="u">' + c.u + '</span>' : "") + '</div></div>';
+}
+
+function rendreAnalyse(){
+  const b = bienCourant();
+  let h = "";
+  if(!b){ $("#v-analyse").innerHTML = '<h2>Analyser une annonce</h2>' + blocImport(); return; }
+  const lect = derniereLecture && derniereLecture.url === b.url ? derniereLecture : (derniereLecture && courant === b.id ? derniereLecture : null);
+  h += '<div class="outils" style="margin-top:16px"><button class="btn petit" data-act="vue-biens">← Biens</button><div class="esp"></div>' +
+    (b.url ? '<a class="btn petit" href="' + esc(b.url) + '" target="_blank" rel="noopener" style="text-decoration:none">Ouvrir l\'annonce ↗</a>' : "") + '</div>';
+  if(lect){
+    if(lect.lienSeul){
+      h += '<div class="retour attention"><b>Lien enregistré, mais je ne peux pas lire la page depuis l\'appli</b> : Leboncoin et SeLoger bloquent les lectures automatiques venant d\'un autre site. Deux façons de remplir la fiche en un geste :' +
+        '<ol class="etapes"><li><b>Ouvre l\'annonce</b> puis touche ton favori <b>« → Rendement »</b> (à créer une fois dans Réglages → Import).</li><li>Ou sur l\'annonce : <b>tout sélectionner → copier</b>, puis colle le texte dans l\'onglet Biens.</li></ol>Sinon, complète les champs ci-dessous.</div>';
+    } else {
+      h += '<div class="retour">' + (lect.trouves.length ? '<b>Lu dans l\'annonce</b> : ' + lect.trouves.map(k => LIBELLES[k]).join(", ") + '.' : "Rien de lisible dans l'annonce.") +
+        (lect.manquants.length ? ' <b>À compléter</b> : ' + lect.manquants.map(k => LIBELLES[k]).join(", ") + ' (estimés en attendant).' : "") + '</div>';
+    }
+  }
+  h += '<div id="resultats"></div>';
+  h += '<h2>Données du bien</h2><div class="carte"><div class="champs">';
+  const tr = lect && !lect.lienSeul ? lect.trouves : [];
+  CHAMPS.forEach((g, i) => {
+    if(i) h += '</div></div><h2>' + g.g + '</h2><div class="carte"><div class="champs">';
+    h += g.l.map(c => champHTML(c, b, tr)).join("");
+  });
+  h += '</div></div>';
+  h += '<div class="btns" style="margin-top:14px"><button class="btn" data-act="dupliquer">Dupliquer</button><button class="btn dang" data-act="supprimer">Supprimer ce bien</button></div>';
+  $("#v-analyse").innerHTML = h;
+  rendreResultats();
+  $("#v-analyse").querySelectorAll("[data-k]").forEach(el => {
+    el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
+      const k = el.dataset.k;
+      let v;
+      if(el.type === "checkbox") v = el.checked;
+      else if(el.dataset.t === "num"){ const s = el.value.trim(); v = s === "" ? null : decimal(s); if(v != null && isNaN(v)) return; }
+      else v = el.value;
+      if(k === "prix" && b.prix && v && v !== b.prix && !el._hist){ b.hist.push({ d:Date.now(), prix:b.prix }); el._hist = true; }
+      if(k === "url") b.source = sourceDe(v);
+      b[k] = v; b.maj = Date.now();
+      if((k === "travaux" || k === "mobilier") && v == null) b[k] = 0;
+      sauverB();
+      rendreResultats();
+    });
+  });
+}
+
+function rendreResultats(){
+  const b = bienCourant(); const box = $("#resultats");
+  if(!b || !box) return;
+  const o = calc(b);
+  // placeholders des valeurs estimées
+  const ph = { loyer: o.loyerMarche ? "≈ " + fmtN(o.loyerMarche) + " (estimé)" : "à saisir", copro: "≈ " + fmtN(o.coproEst ? o.coproTotal : 30 * (+b.surface || 0)) + " (estimé)", tf: "≈ " + fmtN(o.loyer) + " (estimé)" };
+  document.querySelectorAll("[data-est]").forEach(el => el.placeholder = ph[el.dataset.est] || "");
+  if(!o.ok){ box.innerHTML = '<div class="carte note">Saisis au moins le <b>prix</b> et la <b>surface</b> pour lancer le calcul.</div>'; return; }
+  const C = 2 * Math.PI * 42, part = o.score / 100;
+  let h = '<div class="carte"><div class="score"><div class="anneau"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="none" stroke="var(--carte2)" stroke-width="9"/><circle cx="48" cy="48" r="42" fill="none" stroke="' + o.couleur + '" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + (C * part) + ' ' + C + '"/></svg><div class="v"><div><b>' + o.score + '</b><small>/ 100</small></div></div></div>' +
+    '<div><div class="verdict" style="color:' + o.couleur + '">' + o.verdict[0] + '</div><div class="verdict-s">' + o.verdict[1] + '</div></div></div>' +
+    '<div class="kpis">' +
+      kpi("Rendement brut", pct(o.brut), "frais compris · annonce : " + pct(o.brutAnnonce), o.brut >= P.objectif / 100) +
+      kpi("Rendement net", pct(o.net), "après charges et vacance", P.base === "nette" && o.net >= P.objectif / 100) +
+      kpi("Net-net", pct(o.netNet), "après impôt, 1re année") +
+      kpi("Cash-flow", sgn(o.cfNet) + "/m", P.credit ? "crédit " + fmtN(P.duree) + " ans, après impôt" : "sans crédit, après impôt") +
+    '</div></div>';
+  // offre
+  h += '<h2>Offre maximale pour ' + fmtN(P.objectif, 1) + ' % ' + (P.base === "nette" ? "net" : "brut") + '</h2><div class="carte"><div class="offre"><div><div class="gros">' + eur(Math.round(o.offre / 500) * 500) + '</div><div class="note">prix vendeur, frais de notaire' + (o.travaux || o.mobilier ? ", travaux et mobilier" : "") + ' en plus</div></div>' +
+    '<div style="text-align:right"><div class="num" style="font-size:17px;color:' + (o.nego <= 0 ? "var(--bon)" : o.nego <= 0.1 ? "var(--moyen)" : "var(--mauvais)") + '">' + (o.nego <= 0 ? "Déjà atteint" : "−" + pct(o.nego, 0)) + '</div><div class="note">' + (o.nego <= 0 ? "marge : " + eur(o.offre - b.prix) : "à négocier (" + eur(b.prix - o.offre) + ")") + '</div></div></div>' +
+    '<table class="t" style="margin-top:10px"><tr><td class="note">Rendement visé</td><td class="r note">Prix max</td><td class="r note">vs affiché</td></tr>' +
+    [6, 7, 8, 10, 12].map(t => { const pm = o.prixMax(t / 100); return '<tr' + (t === P.objectif ? ' class="tot"' : "") + '><td>' + t + ' %</td><td class="r">' + eur(Math.round(pm / 500) * 500) + '</td><td class="r">' + (b.prix ? (pm >= b.prix ? "+" : "−") + pct(Math.abs(pm / b.prix - 1), 0) : "") + '</td></tr>'; }).join("") +
+    '</table></div>';
+  // alertes
+  if(o.alertes.length) h += '<h2>Points d\'attention</h2><div class="carte">' + o.alertes.map(([c, t]) => '<div class="alerte"><div class="ic" style="background:' + c + '">!</div><div>' + esc(t) + '</div></div>').join("") + '</div>';
+  // détail du score
+  h += '<h2>Détail du score</h2><div class="carte">' + o.parts.map(x => '<div class="crit"><span>' + x.n + '</span><span class="p">' + fmtN(x.p, 0) + ' / ' + x.m + '</span><div class="barre" style="grid-column:1/-1"><i style="width:' + (x.p / x.m * 100) + '%;background:' + couleurScore(x.p / x.m * 100) + '"></i></div></div>').join("") +
+    (b.dpe === "G" && !o.travaux ? '<div class="note">Score plafonné à 35 : DPE G sans travaux prévus.</div>' : "") + '</div>';
+  // détails chiffrés
+  const est = f => f ? ' <span class="est">estimé</span>' : "";
+  h += '<h2>Le calcul</h2><div class="carte">' +
+    '<details class="pli" open><summary>Coût total de l\'opération</summary><table class="t">' +
+      ligne("Prix affiché", eur(b.prix)) + ligne("Frais de notaire (" + fmtN(o.notairePct, 1) + " %)", eur(o.frais)) +
+      (o.travaux ? ligne("Travaux", eur(o.travaux)) : "") + (o.mobilier ? ligne("Mobilier", eur(o.mobilier)) : "") +
+      ligne("Coût total", eur(o.cout), true) +
+      ligne("Prix au m²", eur(o.prixM2) + (o.ref ? ' <span class="est">marché ' + eur(o.ref.prixM2) + ' (' + (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + ')</span>' : "")) +
+    '</table></details>' +
+    '<details class="pli" open><summary>Revenus et charges par an</summary><table class="t">' +
+      ligne("Loyer " + eur(o.loyer) + " × 12" + est(o.loyerEstime), eur(o.loyerAn)) +
+      ligne("Vacance locative (" + fmtN(P.vacance, 1) + " %)", "−" + eur(o.vacance)) +
+      ligne("Taxe foncière" + est(o.tfEst), "−" + eur(o.tf)) +
+      (o.coproTotal ? ligne("Copro non récupérable (" + fmtN(P.coproNonRecup) + " % de " + eur(o.coproTotal) + ")" + est(o.coproEst), "−" + eur(o.coproProprio)) : "") +
+      ligne("Assurance PNO", "−" + eur(o.pno)) +
+      ligne("Entretien, petits travaux (" + fmtN(P.entretien, 1) + " %)", "−" + eur(o.entretien)) +
+      (o.gestion ? ligne("Gestion agence (" + fmtN(P.gestion, 1) + " %)", "−" + eur(o.gestion)) : "") +
+      (o.gli ? ligne("Garantie loyers impayés (" + fmtN(P.gli, 1) + " %)", "−" + eur(o.gli)) : "") +
+      ligne("Revenu net avant crédit et impôt", eur(o.revenuNet), true) +
+    '</table></details>' +
+    (P.credit ? '<details class="pli"><summary>Crédit</summary><table class="t">' +
+      ligne("Apport", eur(o.apport)) + ligne("Emprunt sur " + fmtN(P.duree) + " ans à " + fmtN(P.taux, 2) + " %", eur(o.emprunt)) +
+      ligne("Mensualité (assurance " + fmtN(P.assurance, 2) + " % comprise)", eur(o.mens)) + ligne("Intérêts 1re année", eur(o.interets1)) +
+    '</table></details>' : "") +
+    '<details class="pli"><summary>Impôt (estimation 1re année)</summary><table class="t">' +
+      ligne("Régime retenu", '<span style="font-family:var(--sans)">' + esc(o.regime) + '</span>') +
+      ligne("Revenu imposable", eur(o.baseImp)) + ligne("TMI " + fmtN(P.tmi) + " % + prélèvements sociaux " + fmtN(o.ps, 1) + " %", "−" + eur(o.impot), true) +
+    '</table></details>' +
+    '<details class="pli"><summary>Cash-flow mensuel</summary><table class="t">' +
+      ligne("Revenu net ÷ 12", eur(o.revenuNet / 12)) + (P.credit ? ligne("Mensualité de crédit", "−" + eur(o.mens)) : "") +
+      ligne("Cash-flow avant impôt", sgn(o.cf)) + ligne("Impôt ÷ 12", "−" + eur(o.impot / 12)) + ligne("Cash-flow après impôt", sgn(o.cfNet), true) +
+    '</table></details></div>';
+  box.innerHTML = h;
+}
+const kpi = (l, v, d, bon) => '<div class="kpi"><div class="l">' + l + '</div><div class="v"' + (bon ? ' style="color:var(--bon)"' : "") + '>' + v + '</div><div class="d">' + d + '</div></div>';
+const ligne = (l, v, tot) => '<tr' + (tot ? ' class="tot"' : "") + '><td>' + l + '</td><td class="r">' + v + '</td></tr>';
+
+/* ---------------- réglages ---------------- */
+const REGL = [
+  { g:"Objectif", l:[
+    { k:"objectif", n:"Rendement visé", u:"%" },
+    { k:"base", n:"Calculé sur", t:"select", o:[["brute","Brut (loyers / coût total)"],["nette","Net (après charges)"]] }
+  ]},
+  { g:"Achat et exploitation", l:[
+    { k:"notaire", n:"Frais de notaire (ancien)", u:"%", d:"≈ 8 % dans le Rhône (droits de mutation à 5 % depuis 2025)" },
+    { k:"vacance", n:"Vacance locative", u:"% loyers", d:"4 % ≈ 2 semaines par an" },
+    { k:"entretien", n:"Entretien, petits travaux", u:"% loyers" },
+    { k:"coproNonRecup", n:"Part de copro non récupérable", u:"%", d:"le reste est refacturé au locataire" },
+    { k:"pno", n:"Assurance propriétaire (PNO)", u:"€/an" },
+    { k:"gestion", n:"Gestion par une agence", u:"% loyers", d:"0 si tu gères toi-même ; ≈ 7 % sinon" },
+    { k:"gli", n:"Garantie loyers impayés", u:"% loyers" }
+  ]},
+  { g:"Crédit", l:[
+    { k:"credit", n:"Financer avec un crédit", t:"check" },
+    { k:"apportMode", n:"Apport", t:"select", o:[["frais","Frais de notaire"],["zero","Aucun (110 %)"],["fixe","Montant fixe"]] },
+    { k:"apportFixe", n:"Apport fixe", u:"€" },
+    { k:"taux", n:"Taux nominal", u:"%", d:"≈ 3,7 % sur 20 ans en octobre 2026" },
+    { k:"duree", n:"Durée", u:"ans" },
+    { k:"assurance", n:"Assurance emprunteur", u:"%/an" }
+  ]},
+  { g:"Fiscalité", l:[
+    { k:"tmi", n:"Tranche marginale d'imposition", t:"select", o:[["0","0 %"],["11","11 %"],["30","30 %"],["41","41 %"],["45","45 %"]] },
+    { k:"psFoncier", n:"Prélèvements sociaux, location nue", u:"%" },
+    { k:"psLmnp", n:"Prélèvements sociaux, meublé", u:"%" },
+    { k:"lmnp", n:"Régime en meublé", t:"select", o:[["reel","LMNP au réel"],["micro","LMNP micro-BIC"]] },
+    { k:"ajusterSurface", n:"Ajuster le loyer estimé à la surface", t:"check", d:"un studio se loue plus cher au m² qu'un T4" }
+  ]}
+];
+function rendreReglages(){
+  let h = "";
+  REGL.forEach(g => {
+    h += '<h2>' + g.g + '</h2><div class="carte"><div class="champs">';
+    h += g.l.map(c => {
+      const v = P[c.k];
+      if(c.t === "check") return '<div class="champ large"><label class="bascule"><span>' + c.n + (c.d ? '<div class="note" style="font-size:12px">' + c.d + '</div>' : "") + '</span><input type="checkbox" data-p="' + c.k + '"' + (v ? " checked" : "") + '></label></div>';
+      if(c.t === "select") return '<div class="champ"><label>' + c.n + '</label><div class="in"><select data-p="' + c.k + '">' + c.o.map(([k, n]) => '<option value="' + k + '"' + (String(v) === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select></div></div>';
+      return '<div class="champ"><label>' + c.n + '</label><div class="in"><input inputmode="decimal" data-p="' + c.k + '" value="' + esc(String(v).replace(".", ",")) + '"><span class="u">' + c.u + '</span></div>' + (c.d ? '<div class="note" style="font-size:11.5px">' + c.d + '</div>' : "") + '</div>';
+    }).join("");
+    h += '</div></div>';
+  });
+  h += '<h2>Marché par ville</h2><div class="carte"><table class="marche" style="width:100%"><tr><th>Ville</th><th style="width:22%">Prix €/m²</th><th style="width:22%">Loyer €/m²/mois</th><th style="width:30px"></th></tr>' +
+    P.marche.map((m, i) => '<tr><td><input data-m="' + i + '" data-f="ville" value="' + esc(m.ville) + '"></td><td><input inputmode="decimal" data-m="' + i + '" data-f="prixM2" value="' + esc(m.prixM2) + '"></td><td><input inputmode="decimal" data-m="' + i + '" data-f="loyerM2" value="' + esc(String(m.loyerM2).replace(".", ",")) + '"></td><td><button class="btn lien dang" data-act="suppr-ville" data-i="' + i + '">✕</button></td></tr>').join("") +
+    '</table><div class="btns"><button class="btn petit" data-act="ajout-ville">+ Ajouter une ville</button><button class="btn petit" data-act="marche-defaut">Valeurs d\'origine</button></div>' +
+    '<div class="note" style="margin-top:8px">Médianes appartements, RealAdvisor, octobre 2026. Ton fichier utilisait 2 388 €/m² et 12,9 €/m² pour Villefranche, et 4 222 €/m² / 16,2 €/m² pour Dardilly. Remplace par tes propres relevés (annonces de location du secteur) : c\'est la donnée qui pèse le plus dans les biens à loyer estimé.</div></div>';
+  // import
+  h += '<h2>Import depuis Leboncoin / SeLoger</h2><div class="carte"><div class="note">Ces sites bloquent la lecture de leurs pages par une autre appli. La solution fiable : un <b>favori</b> que tu touches <b>sur la page de l\'annonce</b> ; il lit l\'annonce et l\'envoie ici, déjà calculée.</div>' +
+    '<div class="btns"><a class="favori" id="lien-favori" href="#">→ Rendement</a><button class="btn" data-act="copier-favori">Copier le code</button></div>' +
+    '<div class="note" style="margin-top:10px"><b>Ordinateur</b> : fais glisser le bouton vert dans ta barre de favoris.</div>' +
+    '<ol class="etapes"><li><b>Android (Chrome)</b> : copie le code, ajoute n\'importe quelle page en favori, modifie-le : nom <b>Rendement</b>, adresse = le code collé.</li><li>Sur une annonce, tape <b>Rendement</b> dans la barre d\'adresse et choisis le favori (celui avec l\'étoile).</li><li><b>iPhone (Safari)</b> : même principe, le favori s\'ouvre depuis l\'icône Signets.</li></ol>' +
+    '<div class="note">Depuis l\'appli Leboncoin, utilise « Partager → Ouvrir dans le navigateur », puis le favori. Sans favori : sur l\'annonce, sélectionne tout le texte, copie, et colle-le dans l\'onglet Biens.</div></div>';
+  // installation
+  h += '<h2>Application</h2><div class="carte"><div id="bloc-install">' + blocInstall() + '</div></div>';
+  // sauvegarde
+  h += '<h2>Sauvegarde</h2><div class="carte"><div class="note">Tout reste sur cet appareil. Exporte de temps en temps pour garder une copie ou passer d\'un appareil à l\'autre.</div>' +
+    '<div class="btns"><button class="btn" data-act="export-json">Exporter (.json)</button><button class="btn" data-act="import-json">Importer</button><button class="btn" data-act="export-csv">Tableau (.csv)</button></div>' +
+    '<input type="file" id="fichier" accept=".json,application/json" class="hide">' +
+    '<div class="btns"><button class="btn petit" data-act="theme">Thème : ' + ({ auto:"automatique", clair:"clair", sombre:"sombre" }[theme]) + '</button><button class="btn petit dang" data-act="reglages-defaut">Réglages par défaut</button></div></div>';
+  h += '<div class="note" style="text-align:center;margin:18px 0">Rendement ' + VERSION + ' · calculs indicatifs, ne remplacent pas un conseil fiscal ou bancaire.</div>';
+  $("#v-reglages").innerHTML = h;
+  $("#lien-favori").href = codeFavori();
+  $("#lien-favori").onclick = e => { e.preventDefault(); toast("Fais-le glisser dans ta barre de favoris, ou copie le code"); };
+  $("#v-reglages").querySelectorAll("[data-p]").forEach(el => el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", () => {
+    const k = el.dataset.p;
+    if(el.type === "checkbox") P[k] = el.checked;
+    else if(el.tagName === "SELECT") P[k] = /^\d+$/.test(el.value) ? +el.value : el.value;
+    else { const v = decimal(el.value); if(isNaN(v)) return; P[k] = v; }
+    sauverP();
+  }));
+  $("#v-reglages").querySelectorAll("[data-m]").forEach(el => el.addEventListener("input", () => {
+    const m = P.marche[+el.dataset.m], f = el.dataset.f;
+    if(f === "ville") m.ville = el.value; else { const v = decimal(el.value); if(!isNaN(v)) m[f] = v; }
+    m.src = "perso"; sauverP();
+  }));
+  $("#fichier").onchange = importerJSON;
+}
+
+/* ---------------- sauvegarde ---------------- */
+function telecharger(nom, contenu, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([contenu], { type }));
+  a.download = nom; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+const dateFichier = () => new Date().toISOString().slice(0, 10);
+function exporterJSON(){ telecharger("rendement-" + dateFichier() + ".json", JSON.stringify({ app:"Rendement", version:VERSION, schema:SCHEMA, date:new Date().toISOString(), params:P, biens }, null, 1), "application/json"); }
+function importerJSON(e){
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      if(!Array.isArray(d.biens)) throw 0;
+      biens = d.biens.map(b => nouveauBien(b));
+      if(d.params) P = Object.assign({}, P_DEFAUT, d.params);
+      sauverB(); sauverP(); courant = biens[0] ? biens[0].id : null; store.set("courant", courant);
+      toast(biens.length + " biens importés"); rendre();
+    } catch(x){ toast("Fichier non reconnu"); }
+  };
+  r.readAsText(f);
+}
+function exporterCSV(){
+  const col = ["Titre","Ville","Prix","Surface","Prix m²","DPE","Loyer","Loyer estimé","Coût total","Brut annonce","Brut réel","Net","Net-net","Cash-flow/mois","Offre max","Score","Suivi","Lien"];
+  const L = [col.join(";")];
+  for(const b of biens){
+    const o = calc(b);
+    const n = (x, d = 0) => fmtN(x, d).replace(/ /g, "");
+    L.push([b.titre, b.ville, b.prix, b.surface, n(o.prixM2), b.dpe, n(o.loyer), o.loyerEstime ? "oui" : "non", n(o.cout), n(o.brutAnnonce * 100, 2), n(o.brut * 100, 2), n(o.net * 100, 2), n(o.netNet * 100, 2), n(o.cfNet), n(o.offre), o.score, b.statut, b.url]
+      .map(x => '"' + String(x == null ? "" : x).replace(/"/g, '""') + '"').join(";"));
+  }
+  telecharger("rendement-" + dateFichier() + ".csv", "﻿" + L.join("\r\n"), "text/csv");
+}
+
+/* ---------------- installation comme application ---------------- */
+let invitation = null;
+const estInstallee = () => (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+const estIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")){
+  navigator.serviceWorker.register("sw.js").catch(e => console.warn("service worker", e));
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); invitation = e; majInstall(); });
+window.addEventListener("appinstalled", () => { invitation = null; majInstall(); toast("Rendement est installée sur ton appareil"); });
+function majInstall(){
+  const b = $("#btn-installer"); if(b) b.classList.toggle("hide", !invitation || estInstallee());
+  const bl = $("#bloc-install"); if(bl) bl.innerHTML = blocInstall();
+}
+async function installer(){
+  if(invitation){
+    invitation.prompt();
+    const r = await invitation.userChoice.catch(() => null);
+    if(r && r.outcome === "accepted") invitation = null;
+    majInstall(); return;
+  }
+  allerVue("reglages");
+  setTimeout(() => { const b = $("#bloc-install"); if(b) b.scrollIntoView({ behavior:"smooth", block:"center" }); }, 60);
+}
+function blocInstall(){
+  const txt = 'class="note"';
+  if(estInstallee()) return '<div ' + txt + '>✓ Tu utilises Rendement en application.</div>';
+  if(invitation) return '<div class="lig"><div class="l">Ajouter Rendement à l\'écran d\'accueil<div class="d">Elle s\'ouvrira en plein écran, avec son icône, et fonctionnera hors ligne.</div></div><button class="btn pri" data-act="installer">Installer</button></div>';
+  if(estIOS) return '<div ' + txt + '>Dans <b>Safari</b> : touche le bouton Partager en bas, puis « <b>Sur l\'écran d\'accueil</b> ». Sur iPhone, seul Safari sait installer une application web.</div>';
+  return '<div ' + txt + '>Dans Chrome : menu <b>⋮</b> → « <b>Ajouter à l’écran d’accueil</b> » → <b>Installer</b> (pas « Créer un raccourci »). L’app s’ouvre ensuite en plein écran, comme CashFlow et Baby Name.</div>' +
+    '<div class="btns"><button class="btn petit" data-act="diag-install">Vérifier l’installation</button></div><div id="diag" class="note hide" style="margin-top:8px"></div>';
+}
+async function diagnostic(){
+  const d = $("#diag"); if(!d) return;
+  const l = [];
+  l.push((location.protocol === "https:" ? "✓" : "✗") + " page en HTTPS");
+  try { const r = await fetch(document.querySelector('link[rel="manifest"]').href); const m = await r.json(); l.push("✓ manifeste prêt (" + (m.icons || []).length + " icônes, départ " + m.start_url + ")"); }
+  catch(e){ l.push("✗ manifeste introuvable"); }
+  for(const ic of ["icons/icon-192.png", "icons/icon-512.png", "sw.js"]){
+    try { const r = await fetch(ic, { cache:"no-store" }); l.push((r.ok ? "✓ " : "✗ ") + ic); } catch(e){ l.push("✗ " + ic); }
+  }
+  if("serviceWorker" in navigator){
+    const reg = await navigator.serviceWorker.getRegistration();
+    l.push((reg && reg.active ? "✓" : "✗") + " service worker " + (reg ? (reg.active ? "actif" : "en cours d'installation") : "absent"));
+    l.push(navigator.serviceWorker.controller ? "✓ page contrôlée" : "… page pas encore contrôlée : recharge la page");
+  } else l.push("✗ service worker non pris en charge");
+  l.push(invitation ? "✓ Chrome propose l'installation directe" : "→ passe par ⋮ puis « Ajouter à l'écran d'accueil »");
+  d.innerHTML = l.map(esc).join("<br>"); d.classList.remove("hide");
+}
+
+/* ---------------- thème ---------------- */
+let theme = store.get("theme", "auto");
+const mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
+function appliquerTheme(){
+  const sombre = theme === "sombre" || (theme === "auto" && mq && mq.matches);
+  document.documentElement.setAttribute("data-theme", sombre ? "sombre" : "clair");
+  const m = document.querySelector('meta[name="theme-color"]'); if(m) m.content = sombre ? "#0f1110" : "#f6f5f1";
+}
+if(mq && mq.addEventListener) mq.addEventListener("change", appliquerTheme);
+appliquerTheme();
+
+/* ---------------- toast, modale ---------------- */
+let _toastT = null;
+function toast(msg, action){
+  const t = $("#toast");
+  t.innerHTML = '<span>' + esc(msg) + '</span>' + (action ? '<button class="toast-act">' + esc(action.label) + '</button>' : "");
+  if(action) t.querySelector(".toast-act").onclick = () => { action.fn(); t.classList.remove("on"); };
+  t.classList.add("on"); clearTimeout(_toastT); _toastT = setTimeout(() => t.classList.remove("on"), action ? 5000 : 2600);
+}
+function journal(){
+  $("#modal").innerHTML = '<div class="mdl-bg" data-act="fermer-modal"><div class="mdl"><h3>Nouveautés</h3><div class="sous">Rendement ' + VERSION + '</div>' +
+    JOURNAL.map(j => '<b>' + j.v + '</b> <span class="note">' + j.d + ' · ' + esc(j.t) + '</span><ul>' + j.l.map(x => '<li>' + esc(x) + '</li>').join("") + '</ul>').join("") +
+    '<div class="btns"><button class="btn" data-act="fermer-modal">Fermer</button></div></div></div>';
+}
+
+/* ---------------- actions ---------------- */
+document.addEventListener("click", async e => {
+  const nv = e.target.closest("nav.bas button");
+  if(nv){ allerVue(nv.dataset.vue); return; }
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  const a = el.dataset.act;
+  if(a === "fermer-modal"){ if(e.target === el || el.tagName === "BUTTON") $("#modal").innerHTML = ""; return; }
+  if(a === "analyser") analyserSaisie();
+  else if(a === "coller"){
+    try { const t = await navigator.clipboard.readText(); $("#saisie").value = t; if(t.trim()) analyserSaisie(); }
+    catch(x){ toast("Accès au presse-papiers refusé : colle avec un appui long"); }
+  }
+  else if(a === "vierge"){ const b = nouveauBien({ titre:"Nouveau bien", ville:"Villefranche-sur-Saône", cp:"69400" }); biens.unshift(b); sauverB(); courant = b.id; store.set("courant", courant); derniereLecture = null; allerVue("analyse"); }
+  else if(a === "ouvrir"){ courant = el.dataset.id; store.set("courant", courant); derniereLecture = null; allerVue("analyse"); }
+  else if(a === "vue-biens") allerVue("biens");
+  else if(a === "supprimer"){
+    const b = bienCourant(); if(!b) return;
+    const i = biens.indexOf(b); biens.splice(i, 1); sauverB();
+    courant = biens[0] ? biens[0].id : null; store.set("courant", courant);
+    allerVue("biens");
+    toast("Bien supprimé", { label:"Annuler", fn:() => { biens.splice(i, 0, b); sauverB(); courant = b.id; store.set("courant", courant); rendre(); } });
+  }
+  else if(a === "dupliquer"){
+    const b = bienCourant(); if(!b) return;
+    const c = nouveauBien(Object.assign(JSON.parse(JSON.stringify(b)), { id:uid(), titre:b.titre + " (copie)", url:"", hist:[], cree:Date.now(), maj:Date.now() }));
+    biens.unshift(c); sauverB(); courant = c.id; store.set("courant", courant); derniereLecture = null; rendreAnalyse(); toast("Copie créée : fais varier les hypothèses");
+  }
+  else if(a === "ajout-ville"){ P.marche.push({ ville:"", cp:"", prixM2:2500, loyerM2:13, src:"perso" }); sauverP(); rendreReglages(); }
+  else if(a === "suppr-ville"){ P.marche.splice(+el.dataset.i, 1); sauverP(); rendreReglages(); }
+  else if(a === "marche-defaut"){ P.marche = JSON.parse(JSON.stringify(MARCHE_DEFAUT)); sauverP(); rendreReglages(); toast("Références marché d'origine rétablies"); }
+  else if(a === "reglages-defaut"){ const m = P.marche; P = Object.assign({}, P_DEFAUT, { marche:m }); sauverP(); rendreReglages(); toast("Réglages par défaut (villes conservées)"); }
+  else if(a === "copier-favori"){
+    try { await navigator.clipboard.writeText(decodeURIComponent(codeFavori())); toast("Code du favori copié"); }
+    catch(x){ $("#modal").innerHTML = '<div class="mdl-bg" data-act="fermer-modal"><div class="mdl"><h3>Code du favori</h3><div class="sous">Sélectionne et copie tout le texte</div><div class="code" style="max-height:240px;user-select:all">' + esc(decodeURIComponent(codeFavori())) + '</div><div class="btns"><button class="btn" data-act="fermer-modal">Fermer</button></div></div></div>'; }
+  }
+  else if(a === "export-json") exporterJSON();
+  else if(a === "import-json") $("#fichier").click();
+  else if(a === "export-csv") exporterCSV();
+  else if(a === "theme"){ theme = { auto:"clair", clair:"sombre", sombre:"auto" }[theme]; store.set("theme", theme); appliquerTheme(); rendreReglages(); }
+  else if(a === "installer") installer();
+  else if(a === "diag-install") diagnostic();
+  else if(a === "journal") journal();
+});
+document.addEventListener("keydown", e => { if(e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.id === "saisie") analyserSaisie(); });
+
+/* ---------------- démarrage ---------------- */
+$("#ver-chip").textContent = "v" + VERSION;
+if(!recevoir()) rendre();
+</script>
+</body>
+</html>
