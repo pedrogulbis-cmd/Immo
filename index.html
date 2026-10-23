@@ -388,9 +388,13 @@ ul.argu li{margin:5px 0;line-height:1.5}
 
 <script>
 "use strict";
-const VERSION = "2.1.0";
+const VERSION = "2.1.1";
 const SCHEMA = 1;
 const JOURNAL = [
+  { v:"2.1.1", d:"2026-10-23", t:"Favori plus parlant", l:[
+    "Le favori affiche un bandeau vert sur l'annonce dès qu'il se lance (ou l'erreur, en rouge) : on sait tout de suite s'il a marché.",
+    "Instructions Android clarifiées : le favori se lance depuis la barre d'adresse, pas depuis la liste des favoris."
+  ]},
   { v:"2.1.0", d:"2026-10-23", t:"Budget, ville, colocation, carte", l:[
     "Nouvel onglet Budget : ta capacité d'emprunt (règle des 35 %, 70 % des loyers retenus) et l'effet de chaque bien, seul ou à la suite.",
     "Onglet Marché de la fiche : score de la ville (tension locative selon le zonage ABC, évolution de la population, risques Géorisques) et encadrement des loyers.",
@@ -1270,14 +1274,19 @@ function lirePhotosPage(){
 }
 function appUrl(){ return location.href.split("#")[0].split("?")[0]; }
 function codeFavori(){
-  const c = "(function(){var A=" + JSON.stringify(appUrl()) + ";var d={u:location.href.split('#')[0].split('?')[0],h:location.hostname,t:document.title};" +
+  const c = "(function(){var M=document.createElement('div');" +
+    "M.style.cssText='position:fixed;left:12px;right:12px;top:12px;z-index:2147483647;background:#1f6f50;color:#fff;font:600 15px system-ui,sans-serif;padding:14px 16px;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.3);text-align:center';" +
+    "M.textContent='→ Rendement : lecture de l’annonce…';(document.body||document.documentElement).appendChild(M);setTimeout(function(){M.remove()},6000);" +
+    "try{var A=" + JSON.stringify(appUrl()) + ";var d={u:location.href.split('#')[0].split('?')[0],h:location.hostname,t:document.title};" +
     "try{var n=document.getElementById('__NEXT_DATA__');if(n){var j=JSON.parse(n.textContent),a=j&&j.props&&j.props.pageProps&&j.props.pageProps.ad;" +
     "if(a){d.lbc={s:a.subject,p:a.price,b:(a.body||'').slice(0,5000),c:a.location&&a.location.city,z:a.location&&a.location.zipcode,la:a.location&&a.location.lat,lo:a.location&&a.location.lng,at:(a.attributes||[]).map(function(x){return[x.key,x.value,x.value_label]}),im:((a.images&&(a.images.urls_large||a.images.urls))||[]).slice(0,10),th:((a.images&&a.images.urls_thumb)||[]).slice(0,1)}}}}catch(e){}" +
     "try{d.ld=[].slice.call(document.querySelectorAll('script[type=\"application/ld+json\"]')).map(function(s){return s.textContent.slice(0,4000)}).slice(0,6)}catch(e){}" +
     "try{d.pi=(" + lirePhotosPage.toString().replace(/\s*\n\s*/g, " ") + ")()}catch(e){}" +
     "d.og=(document.querySelector('meta[property=\"og:image\"]')||{}).content||'';" +
     "d.x=(document.body.innerText||'').slice(0,9000);" +
-    "var s=btoa(unescape(encodeURIComponent(JSON.stringify(d))));var w=window.open(A+'#import='+s,'rendement');if(!w)location.href=A+'#import='+s})();";
+    "var s=btoa(unescape(encodeURIComponent(JSON.stringify(d))));var w=window.open(A+'#import='+s,'rendement');" +
+    "if(w)M.textContent='→ Rendement : annonce envoyée';else location.href=A+'#import='+s" +
+    "}catch(e){M.style.background='#c4442f';M.textContent='→ Rendement : erreur ('+e.message+')'}})();";
   return "javascript:" + encodeURIComponent(c);
 }
 
@@ -2278,9 +2287,12 @@ function rendreReglages(){
   // import
   h += '<h2>Import depuis Leboncoin / SeLoger</h2><div class="carte"><div class="note">Ces sites bloquent la lecture de leurs pages par une autre appli. La solution fiable : un <b>favori</b> que tu touches <b>sur la page de l\'annonce</b> ; il lit l\'annonce et l\'envoie ici, déjà calculée.</div>' +
     '<div class="btns"><a class="favori" id="lien-favori" href="#">→ Rendement</a><button class="btn" data-act="copier-favori">Copier le code</button></div>' +
-    '<div class="note" style="margin-top:10px"><b>Ordinateur</b> : fais glisser le bouton vert dans ta barre de favoris.</div>' +
-    '<ol class="etapes"><li><b>Android (Chrome)</b> : copie le code, ajoute n\'importe quelle page en favori, modifie-le : nom <b>Rendement</b>, adresse = le code collé.</li><li>Sur une annonce, tape <b>Rendement</b> dans la barre d\'adresse et choisis le favori (celui avec l\'étoile).</li><li><b>iPhone (Safari)</b> : même principe, le favori s\'ouvre depuis l\'icône Signets.</li></ol>' +
-    '<div class="note">Depuis l\'appli Leboncoin, utilise « Partager → Ouvrir dans le navigateur », puis le favori. Sans favori : sur l\'annonce, sélectionne tout le texte, copie, et colle-le dans l\'onglet Biens.</div></div>';
+    '<div class="retour attention" style="margin-top:12px"><b>Android (Chrome) : toucher le favori dans la liste des favoris ne fait rien</b>, Chrome bloque ce type de favori à cet endroit. Il se lance depuis la barre d\'adresse :' +
+      '<ol class="etapes"><li><b>Une seule fois</b> : touche « Copier le code ». Dans Chrome, ajoute n\'importe quelle page en favori (☆), puis modifie ce favori : nom <b>Rendement</b>, URL = colle le code. Vérifie qu\'elle commence bien par <b>javascript:</b>.</li>' +
+      '<li>Sur l\'annonce, touche la <b>barre d\'adresse</b>, tape <b>Rendement</b>, puis touche la suggestion marquée d\'une <b>étoile</b> (pas la recherche Google).</li>' +
+      '<li>Un bandeau vert « → Rendement » s\'affiche en haut de l\'annonce, puis l\'appli s\'ouvre avec la fiche remplie. Pas de bandeau : le favori n\'a pas été lancé.</li></ol></div>' +
+    '<div class="note" style="margin-top:10px"><b>Ordinateur</b> : fais glisser le bouton vert dans ta barre de favoris, puis clique dessus sur une annonce.<br><b>iPhone (Safari)</b> : le favori se lance normalement depuis l\'icône Signets.<br><b>Appli Leboncoin</b> : ⋮ → « Ouvrir dans le navigateur », puis le favori.</div>' +
+    '<div class="note" style="margin-top:6px">Ancien favori ? Recrée-le : le code change avec les nouvelles versions (photos, position, bandeau).</div></div>';
   // installation
   h += '<h2>Application</h2><div class="carte"><div id="bloc-install">' + blocInstall() + '</div></div>';
   // sauvegarde
