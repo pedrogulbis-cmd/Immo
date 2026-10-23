@@ -99,7 +99,7 @@ a.btn{color:var(--acc)}
 .retour b{font-weight:600}
 
 /* liste des biens */
-.outils{display:flex;gap:8px;align-items:center;margin:14px 0 8px}
+.outils{display:flex;gap:8px;align-items:center;margin:14px 0 8px;flex-wrap:wrap}
 .outils select{border:1px solid var(--ligne);background:var(--carte);border-radius:10px;padding:8px 10px;font-size:14px}
 .bien{display:flex;gap:12px;align-items:center;cursor:pointer}
 .bien .inf{flex:1;min-width:0}
@@ -234,6 +234,26 @@ ol.etapes b{color:var(--texte);font-weight:600}
 .bien .suppr:hover{color:var(--mauvais)}
 @media (max-width:350px){ .kpis.k3{grid-template-columns:1fr 1fr} }
 
+.partage{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc);margin-bottom:10px}
+
+/* photos */
+.bien .vign{flex:none;width:56px;height:56px;border-radius:10px;object-fit:cover;background:var(--carte2);align-self:center}
+.photos{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px 10px;padding:0 16px;scrollbar-width:none}
+.photos::-webkit-scrollbar{display:none}
+.photos img{flex:none;width:46%;max-width:260px;height:120px;object-fit:cover;border-radius:12px;scroll-snap-align:center;background:var(--carte2);cursor:zoom-in}
+.photos img:only-child{width:100%;max-width:none}
+.visio{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.94)}
+.visio .defil{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.visio .defil::-webkit-scrollbar{display:none}
+.visio .defil img{flex:none;width:100%;height:100%;object-fit:contain;scroll-snap-align:center}
+.visio .fermer{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:18px;cursor:pointer}
+.visio .cpt{position:absolute;left:0;right:0;bottom:calc(18px + env(safe-area-inset-bottom));text-align:center;color:#fff;font-family:var(--mono);font-size:13px}
+.photos img.mienne{outline:2px solid var(--acc);outline-offset:-2px}
+.ajout-photo{flex:none;width:96px;height:120px;border-radius:12px;border:1.5px dashed var(--ligne);background:var(--carte);color:var(--gris);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;cursor:pointer}
+.ajout-photo span{font-size:24px;line-height:1;color:var(--acc)}
+.visio .suppr-ph{position:absolute;top:calc(12px + env(safe-area-inset-top));left:12px;border:none;border-radius:99px;background:rgba(255,255,255,.15);color:#fff;padding:9px 14px;font-size:14px;cursor:pointer}
+.imp-photo{display:block;width:150pt;height:100pt;object-fit:cover;border-radius:6pt;margin:0 0 4pt auto}
+
 /* comparaison */
 .coche{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--ligne);display:grid;place-items:center;color:transparent;font-size:14px;font-weight:700;align-self:center}
 .coche.on{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -309,13 +329,32 @@ ol.etapes b{color:var(--texte);font-weight:600}
 <div id="barre-kpi" class="hide" data-act="haut"><div class="wrap"></div></div>
 <div id="toast"></div>
 <div id="impression"></div>
+<input type="file" id="fichier-photo" accept="image/*" multiple class="hide">
 <div id="modal"></div>
 
 <script>
 "use strict";
-const VERSION = "1.3.0";
+const VERSION = "1.6.0";
 const SCHEMA = 1;
 const JOURNAL = [
+  { v:"1.6.0", d:"2026-10-23", t:"Mes photos de visite", l:[
+    "« ＋ Photo » dans la fiche : prends une photo ou choisis-en dans ta galerie, plusieurs à la fois.",
+    "Elles sont réduites (≈ 1600 px) et gardées sur l'appareil, avec un contour vert pour les distinguer de celles de l'annonce.",
+    "Plein écran, miniature dans la liste et fiche PDF comme les photos de l'annonce ; suppression avec Annuler.",
+    "Elles ne sont pas incluses dans l'export .json (trop lourdes) : elles restent sur ce téléphone.",
+    "SeLoger (et Bien'ici, PAP…) : le favori récupère toutes les photos de l'annonce, pas seulement l'image d'aperçu."
+  ]},
+  { v:"1.5.0", d:"2026-10-23", t:"Photos", l:[
+    "Le favori « → Rendement » récupère les photos de l'annonce (recrée-le dans Réglages → Import pour en profiter).",
+    "Miniature du bien dans la liste, galerie en haut de la fiche, plein écran en touchant une photo.",
+    "Les photos vues sont gardées sur l'appareil : elles restent visibles hors ligne et même si l'annonce est retirée.",
+    "La première photo figure sur la fiche PDF pour la banque."
+  ]},
+  { v:"1.4.0", d:"2026-10-23", t:"Partage depuis l'appli Leboncoin", l:[
+    "Partager une annonce vers Rendement garde son titre et en tire ce qu'il peut (type, surface, pièces, prix s'il y figure).",
+    "Ce que le partage ne transmet pas est demandé tout en haut, dans une petite carte : quelques chiffres à taper et le calcul se fait.",
+    "Partager une annonce déjà enregistrée met à jour sa fiche au lieu d'en créer une deuxième."
+  ]},
   { v:"1.3.0", d:"2026-10-23", t:"Comparer et présenter", l:[
     "Comparer 2 ou 3 biens côte à côte : bouton « Comparer » dans la liste, le meilleur chiffre de chaque ligne en vert.",
     "Fiche PDF pour la banque : plan de financement, loyers, charges, rentabilité, mensualité couverte par le loyer.",
@@ -498,7 +537,7 @@ function nouveauBien(o){
   return Object.assign({
     id:uid(), cree:Date.now(), maj:Date.now(), url:"", source:"", titre:"", type:"appartement",
     ville:"", cp:"", prix:null, surface:null, pieces:null, dpe:"", loyer:null, meuble:false,
-    copro:null, tf:null, travaux:0, mobilier:0, neuf:false, statut:"à voir", note:"", hist:[]
+    copro:null, tf:null, travaux:0, mobilier:0, neuf:false, statut:"à voir", note:"", hist:[], photos:[], vignette:"", mesPhotos:[]
   }, o || {});
 }
 let biens = store.get("biens", null) || [];
@@ -714,6 +753,10 @@ function parseLD(liste){
     const ad = o.address || (o.itemOffered && o.itemOffered.address);
     if(ad && typeof ad === "object"){ if(ad.addressLocality && !f.ville) f.ville = ad.addressLocality; if(ad.postalCode && !f.cp) f.cp = String(ad.postalCode); }
     if(o.name && !f.titre && typeof o.name === "string" && o.name.length < 140) f.titre = o.name;
+    if(o.image && !f.photos){
+      const im = [].concat(o.image).map(x => typeof x === "string" ? x : x && (x.url || x.contentUrl)).filter(u => /^https?:\/\//.test(u || ""));
+      if(im.length) f.photos = im.slice(0, 10);
+    }
     for(const k in o){ if(o[k] && typeof o[k] === "object" && k !== "offers" && k !== "address") visite(o[k]); }
   };
   (liste || []).forEach(s => { try { visite(JSON.parse(s)); } catch(e){} });
@@ -738,6 +781,8 @@ function parsePayload(d){
       else if(/charge|copro/i.test(k) && !/inclu/i.test(k) && argent(v) > 0) f.copro = argent(v) * (/month|mensu/i.test(k) ? 12 : 1);
       else if(/tax|fonci/i.test(k) && argent(v) > 50) f.tf = argent(v);
     });
+    if(Array.isArray(a.im) && a.im.length) f.photos = a.im.slice(0, 10);
+    if(Array.isArray(a.th) && a.th[0]) f.vignette = a.th[0];
     const fd = parseTexte(a.b || "");
     for(const k of ["copro", "tf", "loyer", "dpe", "surface", "pieces", "meuble"]) if(f[k] == null && fd[k] != null) f[k] = fd[k];
   }
@@ -745,6 +790,10 @@ function parsePayload(d){
   for(const k in ld) if(f[k] == null) f[k] = ld[k];
   const tx = parseTexte(d.x || "");
   for(const k in tx) if(f[k] == null && k !== "url") f[k] = tx[k];
+  const pi = Array.isArray(d.pi) ? d.pi.filter(u => /^https?:\/\//.test(u)) : [];
+  if(!(d.lbc && Array.isArray(d.lbc.im) && d.lbc.im.length) && pi.length > (f.photos || []).length) f.photos = pi.slice(0, 10);
+  if(!f.photos && /^https?:\/\//.test(d.og || "")) f.photos = [d.og];
+  if(!f.vignette && f.photos) f.vignette = f.photos[0];
   if(!f.titre && d.t) f.titre = String(d.t).split(/[|–-]\s*(leboncoin|seloger|bien'ici)/i)[0].trim().slice(0, 120);
   f.url = d.u || f.url || "";
   f.source = sourceDe(d.h || f.url);
@@ -753,14 +802,27 @@ function parsePayload(d){
 const LIBELLES = { prix:"prix", surface:"surface", pieces:"pièces", type:"type", dpe:"DPE", ville:"ville", cp:"code postal", copro:"charges copro", tf:"taxe foncière", loyer:"loyer", meuble:"meublé", titre:"titre" };
 const ESSENTIELS = ["prix", "surface", "ville", "dpe", "loyer", "copro", "tf"];
 
+/* identifiant d'une annonce : le numéro Leboncoin quand il y en a un (liens partagés,
+   liens du site et anciens formats .htm désignent la même annonce), sinon le lien sans paramètres */
+function cleAnnonce(u){
+  const s = String(u || ""), m = /leboncoin\.fr\/\S*?(\d{8,12})/i.exec(s);
+  return m ? "lbc:" + m[1] : s.split("#")[0].split("?")[0].replace(/\/$/, "").toLowerCase();
+}
+/* titre d'un partage : première ligne utile, sans le lien ni les formules de l'appli */
+function titrePartage(titre, texte){
+  const l = [titre, texte].filter(Boolean).join("\n").replace(/https?:\/\/\S+/g, "").split("\n").map(s => s.trim()).filter(Boolean);
+  const t = (l[0] || "").replace(/^(regarde|découvre|decouvre|voici|vu sur)[^:]*:\s*/i, "")
+    .replace(/\s*[-|–:]\s*(sur\s+)?leboncoin.*$/i, "").replace(/^leboncoin\s*[-|–:]?\s*/i, "").trim();
+  return t.length >= 4 ? t.slice(0, 120) : "";
+}
 /* applique ce qui a été lu : met à jour le bien de la même annonce, ou en crée un */
 function integrer(f, origine){
-  let b = f.url ? biens.find(x => x.url && x.url.split("?")[0] === f.url.split("?")[0]) : null;
+  let b = f.url ? biens.find(x => x.url && cleAnnonce(x.url) === cleAnnonce(f.url)) : null;
   const nouveau = !b;
   if(!b){ b = nouveauBien(); biens.unshift(b); }
   const trouves = [];
   for(const k in f){
-    if(f[k] == null || f[k] === "" || k === "source" || k === "url") continue;
+    if(f[k] == null || f[k] === "" || k === "source" || k === "url" || (Array.isArray(f[k]) && !f[k].length)) continue;
     if(k === "prix" && b.prix && b.prix !== f.prix) b.hist.push({ d:Date.now(), prix:b.prix });
     b[k] = f[k]; if(LIBELLES[k]) trouves.push(k);
   }
@@ -771,6 +833,7 @@ function integrer(f, origine){
   courant = b.id; store.set("courant", courant);
   derniereLecture = { trouves, manquants: ESSENTIELS.filter(k => !trouves.includes(k) && (b[k] == null || b[k] === "")), nouveau, origine, url:b.url };
   setTimeout(() => assurerMarche(b), 0);
+  prechargerPhotos(b);
   return b;
 }
 let derniereLecture = null;
@@ -782,8 +845,7 @@ function analyserSaisie(texte){
   const seulLien = /^https?:\/\/\S+$/.test(s);
   if(seulLien){
     const url = s.replace(/[).,;]+$/, "");
-    const b = integrer({ url, source:sourceDe(url) }, "lien");
-    derniereLecture.lienSeul = true;
+    const b = integrer({ url, source:sourceDe(url) }, "partage");
     allerVue("analyse");
     return b;
   }
@@ -809,10 +871,10 @@ function recevoir(){
   if(q.has("url") || q.has("text")){
     const txt = [q.get("title"), q.get("text"), q.get("url")].filter(Boolean).join("\n");
     const f = parseTexte(txt);
-    if(f.url || f.prix || f.surface){
-      integrer(f, "partage");
-      if(!f.prix || !f.surface) derniereLecture.lienSeul = true;
-    }
+    if(f.url && /leboncoin/i.test(f.url)) f.url = f.url.split("?")[0];
+    const titre = titrePartage(q.get("title"), q.get("text"));
+    if(titre) f.titre = titre;
+    if(f.url || f.prix || f.surface) integrer(f, "partage");
     history.replaceState(null, "", location.pathname);
     allerVue("analyse");
     return true;
@@ -822,17 +884,152 @@ function recevoir(){
 window.addEventListener("hashchange", () => { if(recevoir()) rendre(); });
 
 /* ---------------- favori « → Rendement » ---------------- */
+/* Exécutée sur la page de l'annonce (SeLoger, Bien'ici, PAP…) : les photos hébergées
+   par le site, trouvées dans le code de la page (galerie, données JSON), dans leur
+   ordre d'apparition ; une seule taille gardée par photo, la plus grande.
+   Écrite sans commentaire ni retour à la ligne obligatoire : elle est recopiée dans le favori. */
+function lirePhotosPage(){
+  try {
+    var racine = location.hostname.split(".").slice(-2)[0];
+    var html = document.documentElement.innerHTML.split("\\u002F").join("/").split("\\/").join("/");
+    var liste = html.match(/https?:\/\/[^"'\s<>()\\]+?\.(?:jpe?g|webp)(?:\?[^"'\s<>()\\]*)?/gi) || [];
+    var vus = {}, ordre = [];
+    liste.forEach(function(u){
+      try {
+        if(new URL(u).hostname.indexOf(racine) < 0 || /logo|icon|avatar|picto|sprite|placeholder|marker|agence|agency|banner/i.test(u)) return;
+        var morceaux = u.split("?")[0].split("/"), cle = morceaux.pop(), taille = Math.max.apply(null, (morceaux.join("/").match(/\d{3,4}/g) || ["0"]).map(Number));
+        if(!vus[cle]){ vus[cle] = { u:u, t:taille }; ordre.push(cle); }
+        else if(taille > vus[cle].t) vus[cle] = { u:u, t:taille };
+      } catch(e){}
+    });
+    return ordre.slice(0, 12).map(function(k){ return vus[k].u; });
+  } catch(e){ return []; }
+}
 function appUrl(){ return location.href.split("#")[0].split("?")[0]; }
 function codeFavori(){
   const c = "(function(){var A=" + JSON.stringify(appUrl()) + ";var d={u:location.href.split('#')[0].split('?')[0],h:location.hostname,t:document.title};" +
     "try{var n=document.getElementById('__NEXT_DATA__');if(n){var j=JSON.parse(n.textContent),a=j&&j.props&&j.props.pageProps&&j.props.pageProps.ad;" +
-    "if(a){d.lbc={s:a.subject,p:a.price,b:(a.body||'').slice(0,5000),c:a.location&&a.location.city,z:a.location&&a.location.zipcode,at:(a.attributes||[]).map(function(x){return[x.key,x.value,x.value_label]})}}}}catch(e){}" +
+    "if(a){d.lbc={s:a.subject,p:a.price,b:(a.body||'').slice(0,5000),c:a.location&&a.location.city,z:a.location&&a.location.zipcode,at:(a.attributes||[]).map(function(x){return[x.key,x.value,x.value_label]}),im:((a.images&&(a.images.urls_large||a.images.urls))||[]).slice(0,10),th:((a.images&&a.images.urls_thumb)||[]).slice(0,1)}}}}catch(e){}" +
     "try{d.ld=[].slice.call(document.querySelectorAll('script[type=\"application/ld+json\"]')).map(function(s){return s.textContent.slice(0,4000)}).slice(0,6)}catch(e){}" +
+    "try{d.pi=(" + lirePhotosPage.toString().replace(/\s*\n\s*/g, " ") + ")()}catch(e){}" +
+    "d.og=(document.querySelector('meta[property=\"og:image\"]')||{}).content||'';" +
     "d.x=(document.body.innerText||'').slice(0,9000);" +
     "var s=btoa(unescape(encodeURIComponent(JSON.stringify(d))));var w=window.open(A+'#import='+s,'rendement');if(!w)location.href=A+'#import='+s})();";
   return "javascript:" + encodeURIComponent(c);
 }
 
+/* ---------------- photos ----------------
+   On garde les adresses des photos dans la fiche ; le service worker en garde une
+   copie sur l'appareil dès qu'elles sont chargées (hors ligne, annonce retirée…). */
+const photosBien = b => (b.photos && b.photos.length ? b.photos : b.vignette ? [b.vignette] : []);
+const imgAttr = u => 'src="' + esc(u) + '" alt="" referrerpolicy="no-referrer" onerror="this.remove()"';
+function prechargerPhotos(b){ photosBien(b).concat(b.vignette || []).forEach(u => { const i = new Image(); i.referrerPolicy = "no-referrer"; i.src = u; }); }
+/* mes photos (visite) : réduites puis rangées dans IndexedDB, qui accepte bien plus
+   que le stockage local ; la fiche ne garde que leurs identifiants (b.mesPhotos) */
+const IDB = {
+  db:null,
+  ouvrir(){
+    return this.db || (this.db = new Promise((ok, ko) => {
+      const r = indexedDB.open("rendement", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("photos", { keyPath:"id" });
+      r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
+    }));
+  },
+  async op(mode, fn){
+    const db = await this.ouvrir();
+    return new Promise((ok, ko) => {
+      const tx = db.transaction("photos", mode), r = fn(tx.objectStore("photos"));
+      tx.oncomplete = () => ok(r && r.result); tx.onerror = () => ko(tx.error);
+    });
+  },
+  get(id){ return this.op("readonly", s => s.get(id)); },
+  put(o){ return this.op("readwrite", s => s.put(o)); },
+  del(id){ return this.op("readwrite", s => s.delete(id)); },
+  cles(){ return this.op("readonly", s => s.getAllKeys()); }
+};
+function reduirePhoto(file, max = 1600){
+  return new Promise((ok, ko) => {
+    const u = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const r = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * r); c.height = Math.round(img.naturalHeight * r);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(u);
+      c.toBlob(b => b ? ok(b) : ko(new Error("conversion")), "image/jpeg", 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); ko(new Error("image illisible")); };
+    img.src = u;
+  });
+}
+async function ajouterPhotos(files){
+  const b = bienCourant(); if(!b || !files.length) return;
+  if(!window.indexedDB){ toast("Ce navigateur ne permet pas de garder des photos"); return; }
+  toast("Enregistrement de " + files.length + " photo" + (files.length > 1 ? "s" : "") + "…");
+  let n = 0, erreur = null;
+  for(const fi of files){
+    try {
+      const blob = await reduirePhoto(fi), id = uid();
+      await IDB.put({ id, bien:b.id, blob, d:Date.now() });
+      (b.mesPhotos = b.mesPhotos || []).push(id); n++;
+    } catch(e){ erreur = e; }
+  }
+  b.maj = Date.now(); sauverB();
+  // demande au navigateur de ne pas effacer ces données en cas de manque de place
+  if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  toast(n ? n + " photo" + (n > 1 ? "s" : "") + " ajoutée" + (n > 1 ? "s" : "")
+    : erreur && !/illisible|conversion/.test(erreur.message) ? "Le navigateur refuse de garder des photos (navigation privée ?)" : "Photo illisible");
+  if(vue === "analyse") rendreAnalyse();
+}
+const urlsMes = new Map();
+async function urlMaPhoto(id){
+  if(urlsMes.has(id)) return urlsMes.get(id);
+  const r = await IDB.get(id).catch(() => null);
+  const u = r && r.blob ? URL.createObjectURL(r.blob) : "";
+  urlsMes.set(id, u);
+  return u;
+}
+/* les <img data-ph> reçoivent leur image une fois lue dans IndexedDB */
+function remplirPhotos(racine){
+  if(!racine || !window.indexedDB) return;
+  racine.querySelectorAll("img[data-ph]").forEach(async img => { const u = await urlMaPhoto(img.dataset.ph); if(u) img.src = u; else img.remove(); });
+}
+function vignette(b){
+  const u = b.vignette || photosBien(b)[0], m = (b.mesPhotos || [])[0];
+  return u ? '<img class="vign" loading="lazy" ' + imgAttr(u) + '>' : m ? '<img class="vign" data-ph="' + esc(m) + '" alt="">' : "";
+}
+function bandePhotos(b){
+  const l = photosBien(b), m = b.mesPhotos || [];
+  if(!l.length && !m.length) return '<div class="btns" style="margin:0 0 10px"><button class="btn petit" data-act="ajout-photo">＋ Photos de visite</button></div>';
+  return '<div class="photos">' + l.map((u, i) => '<img loading="lazy" data-act="photo" data-i="' + i + '" ' + imgAttr(u) + '>').join("") +
+    m.map((id, j) => '<img class="mienne" data-act="photo" data-i="' + (l.length + j) + '" data-ph="' + esc(id) + '" alt="">').join("") +
+    '<button class="ajout-photo" data-act="ajout-photo"><span>＋</span>Photo</button></div>';
+}
+function ouvrirPhotos(i){
+  const b = bienCourant(); if(!b) return;
+  const l = photosBien(b), m = b.mesPhotos || [];
+  if(!l.length && !m.length) return;
+  $("#modal").innerHTML = '<div class="visio"><div class="defil">' + l.map(u => '<img ' + imgAttr(u) + '>').join("") + m.map(id => '<img data-ph="' + esc(id) + '" alt="">').join("") + '</div>' +
+    '<button class="suppr-ph hide" data-act="suppr-photo">Supprimer</button><button class="fermer" data-act="fermer-modal" aria-label="Fermer">✕</button><div class="cpt"></div></div>';
+  remplirPhotos($("#modal"));
+  const d = $("#modal .defil"), maj = () => {
+    const k = Math.round(d.scrollLeft / d.clientWidth);
+    $("#modal .cpt").textContent = (k + 1) + " / " + d.children.length + (k >= l.length ? " · ma photo" : "");
+    $("#modal .suppr-ph").classList.toggle("hide", k < l.length);
+  };
+  d.scrollLeft = i * d.clientWidth; d.addEventListener("scroll", maj); maj();
+}
+/* photos qui n'appartiennent plus à aucun bien : copies d'annonce en cache et photos de visite */
+async function nettoyerPhotos(){
+  if(window.caches) try {
+    const c = await caches.open("rendement-photos");
+    const garder = new Set(biens.flatMap(b => photosBien(b).concat(b.vignette || [])));
+    for(const r of await c.keys()) if(!garder.has(r.url)) c.delete(r);
+  } catch(e){}
+  if(window.indexedDB) try {
+    const miennes = new Set(biens.flatMap(b => b.mesPhotos || []));
+    for(const id of await IDB.cles()) if(!miennes.has(id)) IDB.del(id);
+  } catch(e){}
+}
 /* ---------------- vues ---------------- */
 let vue = "biens";
 let tri = store.get("tri", "score");
@@ -878,7 +1075,7 @@ function rendreBiens(){
       '<div class="s">' + esc([b.ville, b.prix ? eur(b.prix) : "", b.surface ? fmtN(b.surface) + " m²" : "", b.dpe ? "DPE " + b.dpe : ""].filter(Boolean).join(" · ")) +
       (baisse > 0 ? ' · <span style="color:var(--bon)">−' + eur(baisse) + '</span>' : "") + '</div>' +
       (o.ok ? '<div class="k"><span>Brut <b>' + pct(o.brut) + '</b></span><span>Net <b>' + pct(o.net) + '</b></span><span>Cash-flow <b>' + sgn(o.cfNet) + '</b>/mois</span></div>' : "") +
-      '</div>' + (modeComp ? '<span class="coche' + (choisi ? " on" : "") + '">✓</span>'
+      '</div>' + vignette(b) + (modeComp ? '<span class="coche' + (choisi ? " on" : "") + '">✓</span>'
         : '<button class="btn lien suppr" data-act="suppr-bien" data-id="' + b.id + '" title="Supprimer ce bien" aria-label="Supprimer ce bien">' + ICONE_SUPPR + '</button>') + '</div>';
   }
   if(modeComp){
@@ -886,6 +1083,7 @@ function rendreBiens(){
       (selComp.length >= 2 ? '<button class="btn pri petit" data-act="lancer-comp">Comparer →</button>' : "") + '</div></div>';
   }
   $("#v-biens").innerHTML = h;
+  remplirPhotos($("#v-biens"));
   $("#tri").onchange = e => { tri = e.target.value; store.set("tri", tri); rendreBiens(); };
 }
 
@@ -929,6 +1127,20 @@ function rendreComparer(){
   $("#v-comparer").innerHTML = h;
 }
 
+/* partage (appli Leboncoin) ou lien seul : seuls le titre et le lien arrivent,
+   on demande juste ce qui manque, au même endroit que le résultat */
+const CHAMPS_PARTAGE = ["prix", "surface", "ville", "loyer", "dpe"];
+function cartePartage(b, lect){
+  const tous = [].concat(...CHAMPS.map(g => g.l));
+  const manq = CHAMPS_PARTAGE.filter(k => b[k] == null || b[k] === "");
+  const lu = lect.trouves.filter(k => k !== "titre").map(k => LIBELLES[k]);
+  if(!manq.length) return "";
+  return '<div class="carte partage"><b>Annonce reçue' + (b.source ? " de " + esc(b.source) : "") + '</b>' +
+    '<div class="note" style="margin-top:2px">' + (lu.length ? "Déjà lu : " + lu.join(", ") + ". " : "") + 'Le partage ne transmet que le titre et le lien : complète ici, tout se recalcule au fur et à mesure.</div>' +
+    '<div class="champs" style="margin-top:10px">' + manq.map(k => champHTML(tous.find(c => c.k === k), b, [])).join("") + '</div>' +
+    '<div class="note" style="margin-top:8px">Loyer et DPE facultatifs (loyer estimé d\'après le marché). Pour tout remplir d\'un coup : ouvre l\'annonce dans le navigateur et touche le favori « → Rendement ».</div></div>';
+}
+
 const CHAMPS = [
   { g:"Annonce", l:[
     { k:"titre", n:"Titre", t:"text", large:true },
@@ -965,13 +1177,15 @@ function rendreAnalyse(){
   let h = "";
   if(!b){ $("#v-analyse").innerHTML = '<h2>Analyser une annonce</h2>' + blocImport(); return; }
   const lect = derniereLecture && derniereLecture.url === b.url ? derniereLecture : (derniereLecture && courant === b.id ? derniereLecture : null);
-  h += '<div class="outils" style="margin-top:16px"><button class="btn petit" data-act="vue-biens">← Biens</button><div class="esp"></div><button class="btn petit" data-act="pdf">PDF banque</button>' +
-    (b.url ? '<a class="btn petit" href="' + esc(b.url) + '" target="_blank" rel="noopener" style="text-decoration:none">Ouvrir l\'annonce ↗</a>' : "") + '</div>';
+  h += '<div class="outils" style="margin-top:16px"><button class="btn petit" data-act="vue-biens">← Biens</button><div class="esp"></div><button class="btn petit" data-act="pdf" title="Fiche PDF pour la banque">PDF banque</button>' +
+    (b.url ? '<a class="btn petit" href="' + esc(b.url) + '" target="_blank" rel="noopener" style="text-decoration:none">Annonce ↗</a>' : "") + '</div>';
+  if(lect && lect.origine === "partage") h += cartePartage(b, lect);
+  h += bandePhotos(b);
   h += '<div id="synthese"></div>' +
     '<div class="carte sim hide" id="sim"><div class="lig"><div class="l"><b>Et si je négocie ?</b><div class="d" id="sim-t"></div></div><button class="btn petit pri hide" id="sim-ok" data-act="sim-retenir">Retenir ce prix</button></div>' +
     '<input type="range" id="sim-r" min="0" max="30" step="1" value="0" aria-label="Baisse de prix simulée">' +
     '<div class="sim-ech"><span>prix affiché</span><button class="btn lien petit" data-act="sim-offre">caler sur l\'offre max</button><span>−30 %</span></div></div>';
-  if(lect){
+  if(lect && lect.origine !== "partage"){
     if(lect.lienSeul){
       h += '<div class="retour attention"><b>Lien enregistré, mais je ne peux pas lire la page depuis l\'appli</b> : Leboncoin et SeLoger bloquent les lectures automatiques venant d\'un autre site. Deux façons de remplir la fiche en un geste :' +
         '<ol class="etapes"><li><b>Ouvre l\'annonce</b> puis touche ton favori <b>« → Rendement »</b> (à créer une fois dans Réglages → Import).</li><li>Ou sur l\'annonce : <b>tout sélectionner → copier</b>, puis colle le texte dans l\'onglet Biens.</li></ol>Sinon, complète les champs ci-dessous.</div>';
@@ -990,7 +1204,13 @@ function rendreAnalyse(){
   h += '</div></div>';
   h += '<div class="btns" style="margin-top:14px"><button class="btn" data-act="dupliquer">Dupliquer</button><button class="btn dang" data-act="supprimer">Supprimer ce bien</button></div>';
   $("#v-analyse").innerHTML = h;
+  remplirPhotos($("#v-analyse"));
   $("#sim-r").addEventListener("input", e => { simNego = +e.target.value; simPour = b.id; rendreResultats(); });
+  if(lect && lect.origine === "partage" && !lect.focusFait){
+    lect.focusFait = true;
+    const p1 = $("#v-analyse .partage input");
+    if(p1) setTimeout(() => p1.focus({ preventScroll:true }), 80);
+  }
   if(obsSyn) obsSyn.disconnect();
   synVisible = true;
   if(window.IntersectionObserver){
@@ -1008,6 +1228,7 @@ function rendreAnalyse(){
       if(k === "prix" && b.prix && v && v !== b.prix && !el._hist){ b.hist.push({ d:Date.now(), prix:b.prix }); el._hist = true; }
       if(k === "url") b.source = sourceDe(v);
       b[k] = v; b.maj = Date.now();
+      $("#v-analyse").querySelectorAll('[data-k="' + k + '"]').forEach(x => { if(x !== el){ if(x.type === "checkbox") x.checked = el.checked; else x.value = el.value; } });
       if((k === "travaux" || k === "mobilier") && v == null) b[k] = 0;
       sauverB();
       rendreResultats();
@@ -1168,7 +1389,8 @@ function ficheBanque(b0){
   let h = '<div class="imp-tete"><div><div class="imp-sur">Projet d\'investissement locatif</div><h1>' + esc(b.titre || "Bien") + '</h1>' +
     '<div class="imp-sous">' + esc([b.type === "maison" ? "Maison" : "Appartement", b.surface ? fmtN(b.surface) + " m²" : "", b.pieces ? fmtN(b.pieces) + " pièces" : "", [b.cp, b.ville].filter(Boolean).join(" ")].filter(Boolean).join(" · ")) + '</div>' +
     (b.url ? '<div class="imp-url">' + esc(b.url) + '</div>' : "") + '</div>' +
-    '<div class="imp-date">' + new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" }) + '</div></div>';
+    '<div style="text-align:right">' + (photoPdf(b) ? '<img class="imp-photo" ' + imgAttr(photoPdf(b)) + '>' : "") +
+    '<div class="imp-date">' + new Date().toLocaleDateString("fr-FR", { day:"numeric", month:"long", year:"numeric" }) + '</div></div></div>';
   h += '<div class="imp-kpis">' + [["Coût total de l'opération", eur(o.cout)], ["Montant emprunté", eur(o.emprunt)], ["Mensualité", P.credit ? eur(o.mens) : "–"],
     ["Loyer mensuel HC", eur(o.loyer)], ["Rendement brut", pct(o.brut)], ["Cash-flow après impôt", sgn(o.cfNet) + " / mois"]]
     .map(([l, v]) => '<div><span>' + l + '</span><b>' + v + '</b></div>').join("") + '</div>';
@@ -1222,7 +1444,10 @@ function ficheBanque(b0){
     (src.length ? " Sources et hypothèses : " + esc(src.join(" ; ")) + "." : "") + '</div>';
   return h;
 }
-function imprimerFiche(){
+const photoPdf = b => photosBien(b)[0] || urlsMes.get((b.mesPhotos || [])[0]) || "";
+async function imprimerFiche(){
+  const b0 = bienCourant();
+  if(b0 && !photosBien(b0).length && (b0.mesPhotos || [])[0]) await urlMaPhoto(b0.mesPhotos[0]);
   const b = bienCourant(); if(!b) return;
   const h = ficheBanque(b);
   if(!h){ toast("Il manque le prix ou la surface"); return; }
@@ -1230,7 +1455,10 @@ function imprimerFiche(){
   const titre = document.title;
   document.title = "Projet locatif - " + (b.titre || "bien").replace(/[\\/:*?"<>|]/g, "").slice(0, 60);
   window.addEventListener("afterprint", () => { document.title = titre; }, { once:true });
-  window.print();
+  // attendre la photo (2,5 s au plus) pour qu'elle figure sur le PDF
+  const imgs = [...$("#impression").querySelectorAll("img")].filter(i => !i.complete);
+  if(!imgs.length){ window.print(); return; }
+  Promise.race([Promise.all(imgs.map(i => new Promise(r => { i.onload = i.onerror = r; }))), new Promise(r => setTimeout(r, 2500))]).then(() => window.print());
 }
 
 /* ---------------- réglages ---------------- */
@@ -1467,6 +1695,21 @@ document.addEventListener("click", async e => {
   const el = e.target.closest("[data-act]"); if(!el) return;
   const a = el.dataset.act;
   if(a === "fermer-modal"){ if(e.target === el || el.tagName === "BUTTON") $("#modal").innerHTML = ""; return; }
+  if(a === "photo"){ ouvrirPhotos(+el.dataset.i); return; }
+  if(a === "ajout-photo"){ $("#fichier-photo").click(); return; }
+  if(a === "suppr-photo"){
+    const b = bienCourant(), d = $("#modal .defil"); if(!b || !d) return;
+    const k = Math.round(d.scrollLeft / d.clientWidth) - photosBien(b).length, id = (b.mesPhotos || [])[k];
+    if(id == null) return;
+    b.mesPhotos.splice(k, 1); sauverB();
+    $("#modal").innerHTML = ""; rendreAnalyse();
+    // une copie de bien peut partager la photo : on ne l'efface que si plus personne ne l'utilise
+    const partagee = biens.some(x => (x.mesPhotos || []).includes(id));
+    const rec = await IDB.get(id).catch(() => null);
+    if(!partagee) IDB.del(id).catch(() => {});
+    toast("Photo supprimée", { label:"Annuler", fn: async () => { if(rec && !partagee) await IDB.put(rec).catch(() => {}); b.mesPhotos.splice(k, 0, id); sauverB(); rendreAnalyse(); } });
+    return;
+  }
   if(a === "analyser") analyserSaisie();
   else if(a === "coller"){
     try { const t = await navigator.clipboard.readText(); $("#saisie").value = t; if(t.trim()){ store.set("dernierPP", t.trim()); analyserSaisie(); } }
@@ -1543,6 +1786,11 @@ document.addEventListener("click", async e => {
   else if(a === "journal") journal();
 });
 document.addEventListener("keydown", e => { if(e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.id === "saisie") analyserSaisie(); });
+document.addEventListener("keydown", e => {
+  const d = $("#modal .defil"); if(!d) return;
+  if(e.key === "Escape") $("#modal").innerHTML = "";
+  else if(e.key === "ArrowRight" || e.key === "ArrowLeft") d.scrollBy({ left:(e.key === "ArrowRight" ? 1 : -1) * d.clientWidth, behavior:"smooth" });
+});
 /* annonce copiée ailleurs : en revenant dans l'appli, on propose de l'analyser.
    Seulement si le navigateur a déjà donné l'accès au presse-papiers (premier
    usage du bouton « Coller ») : jamais de demande d'autorisation surprise. */
@@ -1561,6 +1809,7 @@ async function verifierPressePapiers(){
 }
 document.addEventListener("visibilitychange", verifierPressePapiers);
 window.addEventListener("focus", verifierPressePapiers);
+document.addEventListener("change", e => { if(e.target.id === "fichier-photo"){ ajouterPhotos([...e.target.files]); e.target.value = ""; } });
 // coller une annonce suffit : l'analyse part toute seule
 document.addEventListener("paste", e => { if(e.target.id === "saisie") setTimeout(analyserSaisie, 0); });
 
@@ -1568,6 +1817,7 @@ document.addEventListener("paste", e => { if(e.target.id === "saisie") setTimeou
 $("#ver-chip").textContent = "v" + VERSION;
 if(!recevoir()) rendre();
 setTimeout(() => rafraichirMarche(false), 400);
+setTimeout(nettoyerPhotos, 5000);
 window.addEventListener("online", () => rafraichirMarche(false));
 </script>
 </body>

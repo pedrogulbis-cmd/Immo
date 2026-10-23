@@ -30,7 +30,7 @@ donc l'appli ne peut pas aller chercher seule le contenu d'un lien. Trois entré
   structurées (Leboncoin `__NEXT_DATA__`, JSON-LD) et le texte, puis ouvre l'appli avec la fiche remplie.
   Le favori contient l'adresse de l'appli : le recréer si l'appli change d'adresse.
 - **Texte collé** : tout sélectionner sur l'annonce → copier → coller dans l'onglet Biens.
-- **Lien seul** : enregistré dans la fiche, à compléter à la main.
+- **Partage Android / lien seul** : « Partager → Rendement » depuis l'appli Leboncoin (appli installée). Le titre donne type, surface, pièces ; une carte en haut demande le reste (prix, ville…).
 
 Réimporter la même annonce met la fiche à jour et garde l'ancien prix (historique de baisse).
 
