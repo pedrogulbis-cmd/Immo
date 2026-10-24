@@ -401,14 +401,23 @@ ul.argu li{margin:5px 0;line-height:1.5}
 
 <script>
 "use strict";
-const VERSION = "2.3.0";
+const VERSION = "2.4.0";
 const SCHEMA = 1;
 const JOURNAL = [
+  { v:"2.4.0", d:"2026-10-24", t:"État du bien et copropriété en procédure", l:[
+    "Nouveau champ « État du bien » : bon état, à rafraîchir, travaux importants, plateau. Les travaux sont estimés au m² et comptés dans le coût, avec des mois sans loyer la 1re année.",
+    "L'état est repéré tout seul quand le texte de l'annonce le dit (« état de plateau », « entièrement à rénover », « à rafraîchir », « refait à neuf »…). Sinon, choisis-le après avoir vu les photos.",
+    "« Procédure en cours » sur la copropriété : repérée dans l'annonce, alerte rouge, argument de négociation et score plafonné à 40.",
+    "Le tri d'une page de résultats tient compte de ces deux points quand les cartes les mentionnent.",
+    "Le score note le cash-flow moyen des 5 premières années (et non plus la 1re seule, que la déduction des travaux flattait)."
+  ]},
   { v:"2.3.0", d:"2026-10-24", t:"Taux du marché et curseur de taux", l:[
     "Le taux de crédit suit tout seul le taux moyen des nouveaux crédits immobiliers en France (Banque de France, publié chaque mois par la BCE).",
     "Un taux saisi à la main dans Réglages n'est plus remplacé ; un lien permet de revenir au taux du marché.",
     "Dans la fiche, sous le bloc Crédit : un curseur pour essayer un autre taux et voir l'effet sur la mensualité, le coût du crédit, le cash-flow et le score.",
-    "« Garder » applique le taux essayé à tous les biens."
+    "« Garder » applique le taux essayé à tous les biens.",
+    "2.3.1 : correction, les biens ajoutés depuis le favori (ouvert dans un autre onglet) apparaissent aussi dans l'onglet de l'appli déjà ouvert, et ne sont plus écrasés.",
+    "2.3.2 : correction, après le tri d'une page de résultats, la liste des biens restait vide au lancement suivant."
   ]},
   { v:"2.2.0", d:"2026-10-24", t:"Tri d'une page de résultats", l:[
     "Le favori « → Rendement » lancé sur une page de résultats (SeLoger, Leboncoin, Bien'ici, PAP…) lit toutes les annonces affichées.",
@@ -645,7 +654,7 @@ function nouveauBien(o){
     ville:"", cp:"", prix:null, surface:null, pieces:null, dpe:"", loyer:null, meuble:false,
     copro:null, tf:null, travaux:0, mobilier:0, neuf:false, statut:"à voir", note:"", hist:[], photos:[], vignette:"", mesPhotos:[],
     lat:null, lng:null, posApprox:false, adresse:"", ventes:null, visite:null, offre:null, offreJours:7,
-    coloc:false, chambres:null, loyerChambre:null, chargesColoc:null
+    coloc:false, chambres:null, loyerChambre:null, chargesColoc:null, etat:"", coproProcedure:false
   }, o || {});
 }
 let biens = store.get("biens", null) || [];
@@ -708,7 +717,7 @@ function simuler(b, o, regime){
   let report = 0, ard = 0, amDeduits = 0, cumul = 0;
   const annees = [];
   for(let a = 1; a <= N; a++){
-    const loyers = o.loyerAn * Math.pow(1 + P.hausseLoyer / 100, a - 1);
+    const loyers = o.loyerAn * Math.pow(1 + P.hausseLoyer / 100, a - 1) * (a === 1 ? 1 - (o.moisTravaux || 0) / 12 : 1);   // pas de loyer pendant les travaux
     const enc = loyers * (1 - P.vacance / 100);
     const charges = fixes * Math.pow(1 + P.hausseCharges / 100, a - 1) + loyers * pctLoyer;
     const e = ech[a - 1] || { interets:0, capital:0, restant:0 };
@@ -751,7 +760,9 @@ function simuler(b, o, regime){
   const fin = annees[N - 1];
   return { regime, nom:R.n, N, annees, prixVente:fin.valeur, impotPV:fin.impotPV, netRevente:fin.netRevente,
     enrichissement:fin.enrichi, tri: calculerTRI([-o.apport].concat(annees.map((x, i) => x.cf + (i === N - 1 ? x.netRevente : 0)))),
-    impotMoyen: annees.reduce((s, x) => s + x.impot, 0) / N, cfMoyen: cumul / N / 12 };
+    impotMoyen: annees.reduce((s, x) => s + x.impot, 0) / N, cfMoyen: cumul / N / 12,
+    // cash-flow mensuel moyen des 5 premières années : chantier sans loyer et déduction des travaux lissés
+    cf5: annees.slice(0, 5).reduce((s, x) => s + x.cf, 0) / Math.min(5, N) / 12 };
 }
 const regimesPossibles = (o, meuble) => meuble ? ["lmnpMicro", "lmnpReel"] : (o.loyerAn <= 15000 ? ["micro", "reel"] : ["reel"]);
 function meilleurRegime(b, o){
@@ -949,6 +960,28 @@ async function majTauxMarche(force){
   } catch(e){}
 }
 
+/* ---------------- état du bien ----------------
+   Coût de travaux au m² (ordre de grandeur 2026, hors gros œuvre) et mois sans loyer
+   pendant le chantier. L'état vient de l'annonce quand son texte le dit, sinon de la fiche. */
+const ETATS = {
+  bon:        { n:"Bon état",           m2:0,    mois:0 },
+  rafraichir: { n:"À rafraîchir",       m2:300,  mois:1 },
+  travaux:    { n:"Travaux importants", m2:700,  mois:3 },
+  plateau:    { n:"Plateau à rénover",  m2:1100, mois:5 }
+};
+function detecterEtat(txt){
+  // « aucun travaux à prévoir », « pas de travaux » ne comptent pas
+  const s = String(txt || "").toLowerCase().replace(/(aucuns?|pas de|sans)\s+(gros\s+|petits\s+)?travaux[^.\n]*/g, "");
+  if(/(état de|en|vendu en|livré en)\s+plateau|plateau [àa] (r[ée]nover|am[ée]nager)|enti[eè]rement [àa] r[ée]nover|[àa] r[ée]nover enti[eè]rement|r[ée]novation (compl[eè]te|totale|lourde|int[ée]grale)|tout [àa] refaire|[àa] r[ée]habiliter|gros travaux|non habitable|inhabitable/.test(s)) return "plateau";
+  if(/refait [àa] neuf|enti[eè]rement r[ée]nov[ée]|r[ée]cemment r[ée]nov[ée]|r[ée]nov[ée] en 20\d\d|cl[ée]s? en main/.test(s)) return "bon";
+  if(/[àa] r[ée]nover|travaux (importants|[àa] pr[ée]voir|[àa] r[ée]aliser)|r[ée]novation [àa] pr[ée]voir|[àa] moderniser/.test(s)) return "travaux";
+  if(/[àa] rafra[iî]chir|rafra[iî]chissement|petits travaux|[àa] remettre au go[uû]t du jour/.test(s)) return "rafraichir";
+  return null;
+}
+// copropriété sous procédure (« Procédure en cours », mention obligatoire des annonces)
+const procedureCopro = txt => /proc[ée]dure (en cours|judiciaire)|copropri[ée]t[ée] en difficult[ée]|administrateur (judiciaire|provisoire)|plan de sauvegarde/
+  .test(String(txt || "").toLowerCase().replace(/(aucune|pas de|sans)\s+proc[ée]dure[^.\n]*/g, ""));
+
 /* ---------------- calculs ---------------- */
 function refMarche(b){
   const v = norm(b.ville);
@@ -985,7 +1018,12 @@ function calc(b){
   o.notaire = fraisNotaire(prix, b.neuf);
   o.frais = o.notaire.total;
   o.notairePct = prix ? o.frais / prix * 100 : 0;
-  o.travaux = +b.travaux || 0; o.mobilier = +b.mobilier || 0;
+  // sans montant saisi, les travaux sont estimés d'après l'état du bien
+  o.etat = ETATS[b.etat] ? b.etat : null;
+  o.travauxEstime = !(+b.travaux) && !!o.etat && ETATS[o.etat].m2 > 0;
+  o.travaux = +b.travaux || (o.travauxEstime ? Math.round(ETATS[o.etat].m2 * s / 500) * 500 : 0);
+  o.moisTravaux = o.etat ? ETATS[o.etat].mois : 0;
+  o.mobilier = +b.mobilier || 0;
   o.cout = prix + o.frais + o.travaux + o.mobilier;
   o.loyerAn = o.loyer * 12;
   o.brutAnnonce = prix ? o.loyerAn / prix : 0;        // la formule du fichier Excel
@@ -1039,7 +1077,7 @@ function calc(b){
   const t = o.sim && o.sim.tri, info = o.ref && o.ref.info;
   const crit = [
     ["rdt", "Rendement " + (P.base === "nette" ? "net" : "brut") + " vs objectif " + fmtN(P.objectif, 1) + " %", clamp((o.rendObj - lo) / (obj - lo), 0, 1)],
-    ["cf", "Cash-flow après crédit et impôt", clamp((o.cfNet + 150) / 250, 0, 1)],
+    ["cf", "Cash-flow moyen sur 5 ans, après crédit et impôt", clamp(((o.sim ? o.sim.cf5 : o.cfNet) + 150) / 250, 0, 1)],
     ["prix", "Prix au m² vs " + (o.refVentes ? "ventes autour" : "marché"), o.ecartPrix == null ? 0.5 : clamp((0.15 - o.ecartPrix) / 0.35, 0, 1)],
     ["dpe", "DPE", b.dpe && dpeF[b.dpe] != null ? dpeF[b.dpe] : 0.47],
     ["loyer", "Fiabilité du loyer", o.loyerEstime ? 0.6 : o.ratioLoyer == null ? 0.7 : clamp((1.3 - o.ratioLoyer) / 0.3, 0, 1)],
@@ -1050,6 +1088,7 @@ function calc(b){
   o.parts = crit.filter(c => w[c[0]] > 0).map(([k, n, fr]) => ({ n, p: fr * w[k] / tot * 100, m: Math.round(w[k] / tot * 100) }));
   o.score = Math.round(o.parts.reduce((a, x) => a + x.p, 0));
   if(b.dpe === "G" && !o.travaux) o.score = Math.min(o.score, 35);
+  if(b.coproProcedure) o.score = Math.min(o.score, 40);
   if(!o.ok) o.score = 0;
   o.verdict = o.score >= 75 ? ["Fonce", "Coche les cases de ton objectif. Vérifie les charges réelles et visite."]
             : o.score >= 60 ? ["À négocier", "Intéressant si le prix baisse ou si le loyer se confirme."]
@@ -1067,6 +1106,9 @@ function alertes(b, o){
   else if(b.dpe === "F") a.push([M, "DPE F : interdit à la location pour tout nouveau bail à partir du 1er janvier 2028. Prévois les travaux."]);
   else if(b.dpe === "E") a.push([M, "DPE E : interdit à la location à partir du 1er janvier 2034."]);
   else if(!b.dpe) a.push([I, "DPE inconnu : à demander (compté comme neutre dans le score)."]);
+  if(o.etat && o.etat !== "bon") a.push([o.etat === "plateau" ? R : M, ETATS[o.etat].n + " : " + (o.travauxEstime ? "travaux estimés à ≈ " + eur(o.travaux) + " (" + fmtN(ETATS[o.etat].m2) + " €/m²)" : "travaux de " + eur(o.travaux)) +
+    " inclus dans le coût, et ≈ " + o.moisTravaux + " mois sans loyer la 1re année (" + eur(o.loyer * o.moisTravaux) + "). Fais chiffrer les travaux et saisis le montant."]);
+  if(b.coproProcedure) a.push([R, "Copropriété sous procédure : charges et travaux imprévisibles, crédit et revente plus difficiles. Demande les PV d'AG et la nature de la procédure. Score plafonné à 40."]);
   if(o.loyerEstime) a.push([M, o.loyerM2Ref ? "Loyer estimé d'après le marché (" + fmtN(o.loyerM2Ref, 1) + " €/m²" + (o.coefS !== 1 ? ", ajusté à la surface" : "") + ") : vérifie avec des annonces de location comparables." : "Pas de loyer : saisis-le, ou ajoute la ville dans Réglages → Marché pour l'estimer."]);
   else if(o.ratioLoyer && o.ratioLoyer > 1.15) a.push([M, "Loyer saisi " + pct(o.ratioLoyer - 1, 0) + " au-dessus du marché estimé (" + eur(o.loyerMarche) + ") : risque de vacance ou de surestimation."]);
   if(!o.ref) a.push([I, b.ville ? (marcheEnCours.has(norm(b.ville)) ? "Chargement des prix et loyers de « " + b.ville + " »…" : "Pas de référence marché pour « " + b.ville + " » (hors ligne ou commune introuvable) : vérifie l'orthographe ou ajoute-la dans Réglages → Marché.") : "Indique la ville pour comparer au marché."]);
@@ -1150,6 +1192,8 @@ function parseTexte(txt){
     if(v && !/^(Appartement|Maison|Studio|Prix|Vente|Achat|Bien|Charges)$/i.test(v)){ f.ville = v.trim(); f.cp = m[1]; break; }
     if(!f.cp) f.cp = m[1];
   }
+  const et = detecterEtat(t); if(et) f.etat = et;
+  if(procedureCopro(t)) f.coproProcedure = true;
   const u = t.match(/https?:\/\/[^\s"'<>]+/);
   if(u){ f.url = u[0].replace(/[).,;]+$/, ""); f.source = sourceDe(f.url); }
   return f;
@@ -1210,11 +1254,12 @@ function parsePayload(d){
     if(Array.isArray(a.im) && a.im.length) f.photos = a.im.slice(0, 10);
     if(Array.isArray(a.th) && a.th[0]) f.vignette = a.th[0];
     const fd = parseTexte(a.b || "");
-    for(const k of ["copro", "tf", "loyer", "dpe", "surface", "pieces", "meuble"]) if(f[k] == null && fd[k] != null) f[k] = fd[k];
+    for(const k of ["copro", "tf", "loyer", "dpe", "surface", "pieces", "meuble", "etat", "coproProcedure"]) if(f[k] == null && fd[k] != null) f[k] = fd[k];
   }
   const ld = parseLD(d.ld);
   for(const k in ld) if(f[k] == null) f[k] = ld[k];
-  const tx = parseTexte(d.x || "");
+  // le texte de la page s'arrête avant les « annonces similaires », qui parlent d'autres biens
+  const tx = parseTexte(String(d.x || "").split(/annonces similaires|biens similaires|vous aimerez aussi|ces annonces pourraient|d[ée]couvrez les biens similaires|autres annonces/i)[0]);
   for(const k in tx) if(f[k] == null && k !== "url") f[k] = tx[k];
   const tt = parseTexte(d.t || "");
   for(const k of ["ville", "cp", "surface", "pieces"]) if(f[k] == null && tt[k] != null) f[k] = tt[k];
@@ -1228,7 +1273,7 @@ function parsePayload(d){
   f.source = sourceDe(d.h || f.url);
   return f;
 }
-const LIBELLES = { prix:"prix", surface:"surface", pieces:"pièces", type:"type", dpe:"DPE", ville:"ville", cp:"code postal", copro:"charges copro", tf:"taxe foncière", loyer:"loyer", meuble:"meublé", titre:"titre" };
+const LIBELLES = { prix:"prix", surface:"surface", pieces:"pièces", type:"type", dpe:"DPE", ville:"ville", cp:"code postal", copro:"charges copro", tf:"taxe foncière", loyer:"loyer", meuble:"meublé", titre:"titre", etat:"état du bien", coproProcedure:"procédure en copro" };
 const ESSENTIELS = ["prix", "surface", "ville", "dpe", "loyer", "copro", "tf"];
 
 /* identifiant d'une annonce : le numéro Leboncoin quand il y en a un (liens partagés,
@@ -1358,6 +1403,8 @@ function lireListePage(){
     var res = [], vus = {};
     var num = function(s){ return parseFloat(String(s).replace(/[\s\u00a0\u202f.]/g, "").replace(",", ".")); };
     var ajoute = function(o){ var k = String(o.u || "").split(/[?#]/)[0]; if(!k || vus[k]) return; vus[k] = 1; res.push(o); };
+    var etatTxt = function(t0){ var s = String(t0 || "").toLowerCase().replace(/(aucuns?|pas de|sans)\s+(gros\s+|petits\s+)?travaux[^.\n]*/g, ""); return /(état de|en|vendu en)\s+plateau|plateau [àa] (r[ée]nover|am[ée]nager)|enti[eè]rement [àa] r[ée]nover|r[ée]novation (compl[eè]te|totale|lourde)|tout [àa] refaire|gros travaux/.test(s) ? "plateau" : /[àa] r[ée]nover|travaux (importants|[àa] pr[ée]voir)/.test(s) ? "travaux" : /[àa] rafra[iî]chir|rafra[iî]chissement/.test(s) ? "rafraichir" : ""; };
+    var procTxt = function(t0){ return /proc[ée]dure (en cours|judiciaire)|plan de sauvegarde/.test(String(t0 || "").toLowerCase().replace(/(aucune|pas de|sans)\s+proc[ée]dure[^.\n]*/g, "")) ? 1 : 0; };
     try {
       var n = document.getElementById("__NEXT_DATA__"), j = n && JSON.parse(n.textContent), sd = j && j.props && j.props.pageProps && j.props.pageProps.searchData;
       ((sd && sd.ads) || []).forEach(function(a){
@@ -1367,7 +1414,7 @@ function lireListePage(){
         ajoute({ u:a.url, t:a.subject, p:[].concat(a.price)[0], s:at.square && num(at.square.value), r:at.rooms && +at.rooms.value,
           k:at.real_estate_type && at.real_estate_type.value_label, v:a.location && a.location.city, z:a.location && a.location.zipcode,
           la:a.location && a.location.lat, lo:a.location && a.location.lng, d:at.energy_rate && at.energy_rate.value,
-          i:im.small_url || im.thumb_url || (im.urls || [])[0] });
+          i:im.small_url || im.thumb_url || (im.urls || [])[0], e:etatTxt(a.subject + " " + (a.body || "")), q:procTxt(a.body) });
       });
     } catch(e){}
     if(res.length) return res.slice(0, 80);
@@ -1398,7 +1445,7 @@ function lireListePage(){
         [].slice.call(c.querySelectorAll("img")).forEach(function(x){ var b = x.getBoundingClientRect(), s2 = b.width * b.height; if(b.width >= 100 && s2 > aire){ aire = s2; img = x; } });
         var src = img ? (img.currentSrc || img.getAttribute("data-src") || img.src || "") : "";
         ajoute({ u:a.href.split(/[?#]/)[0], t:"",
-          p:prix, s:s && num(s), r:r && +r, k:/maison|villa/i.test(txt) ? "Maison" : "Appartement", v:ville, z:cp, d:dpe, i:/^https?:/.test(src) ? src : "" });
+          p:prix, s:s && num(s), r:r && +r, k:/maison|villa/i.test(txt) ? "Maison" : "Appartement", v:ville, z:cp, d:dpe, i:/^https?:/.test(src) ? src : "", e:etatTxt(txt), q:procTxt(txt) });
       } catch(e){}
     });
     return res.slice(0, 80);
@@ -1539,7 +1586,11 @@ async function nettoyerPhotos(){
 }
 /* ---------------- vues ---------------- */
 let vue = "biens";
+// « tri » = ordre de la liste ; la page de résultats triée est sous « triPage ».
+// La 2.2 rangeait les deux sous « tri » : on récupère la page et on remet un ordre valide.
+(function(){ const v = store.get("tri", "score"); if(v && typeof v === "object"){ if(!store.get("triPage", null)) store.set("triPage", v); store.set("tri", "score"); } })();
 let tri = store.get("tri", "score");
+if(!["score", "renta", "cf", "prix", "recent"].includes(tri)) tri = "score";
 function allerVue(v){
   vue = v;
   document.querySelectorAll("nav.bas button").forEach(b => b.classList.toggle("on", b.dataset.vue === v));
@@ -1571,8 +1622,8 @@ function rendreBiens(){
   const cle = { score: x => -x.o.score, renta: x => -x.o.rendObj, prix: x => +x.b.prix || 0, cf: x => -x.o.cfNet, recent: x => -x.b.maj };
   l.sort((a, z) => cle[tri](a) - cle[tri](z));
   let h = '<h2>Nouvelle annonce</h2>' + blocImport();
-  const T = store.get("tri", null);
-  if(T && T.items && T.items.length) h += '<button class="btn lien" data-act="voir-tri" style="margin-top:4px">Dernière page triée : ' + T.items.length + ' annonces ' + esc(T.source) + ' →</button>';
+  const T = store.get("triPage", null);
+  if(T && T.items && T.items.length) h += '<button class="btn lien" data-act="voir-tri" style="margin-top:4px">Dernière page triée : ' + T.items.length + ' annonce' + (T.items.length > 1 ? 's ' : ' ') + esc(T.source) + ' →</button>';
   h += '<div class="outils"><h2 style="margin:0;flex:1">Mes biens · ' + biens.length + '</h2>' +
     (biens.length >= 2 && affichage !== "carte" ? '<button class="btn petit' + (modeComp ? " pri" : "") + '" data-act="mode-comp">' + (modeComp ? "Annuler" : "Comparer") + '</button>' : "") +
     (biens.length ? '<button class="btn petit icone' + (affichage === "carte" ? " pri" : "") + '" data-act="affichage" title="' + (affichage === "carte" ? "Voir la liste" : "Voir la carte") + '" aria-label="Carte">' +
@@ -1681,7 +1732,9 @@ const CHAMPS = [
     { k:"tf", n:"Taxe foncière", t:"num", u:"€/an", est:"tf" }
   ]},
   { g:"Achat", l:[
-    { k:"travaux", n:"Travaux", t:"num", u:"€" }, { k:"mobilier", n:"Mobilier", t:"num", u:"€" },
+    { k:"etat", n:"État du bien", t:"select", large:true, o:[["", "Non précisé"], ["bon", "Bon état, rénové"], ["rafraichir", "À rafraîchir (≈ 300 €/m², 1 mois sans loyer)"], ["travaux", "Travaux importants (≈ 700 €/m², 3 mois)"], ["plateau", "Plateau, tout à rénover (≈ 1 100 €/m², 5 mois)"]] },
+    { k:"travaux", n:"Travaux", t:"num", u:"€", est:"travaux" }, { k:"mobilier", n:"Mobilier", t:"num", u:"€" },
+    { k:"coproProcedure", n:"Copropriété sous procédure", t:"check" },
     { k:"neuf", n:"Neuf / VEFA (frais de notaire réduits)", t:"check" },
     { k:"note", n:"Notes", t:"text", large:true }
   ]}
@@ -1691,7 +1744,7 @@ function champHTML(c, b, trouves){
   const cls = "champ" + (c.large ? " large" : "") + (trouves.includes(c.k) ? " trouve" : "");
   if(c.t === "check") return '<div class="champ large"><label class="bascule"><span>' + c.n + '</span><input type="checkbox" data-k="' + c.k + '"' + (v ? " checked" : "") + '></label></div>';
   if(c.t === "select") return '<div class="' + cls + '"><label>' + c.n + '</label><div class="in"><select data-k="' + c.k + '">' + c.o.map(([k, n]) => '<option value="' + esc(k) + '"' + (String(v || "") === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select></div></div>';
-  return '<div class="' + cls + '"><label>' + c.n + '</label><div class="in"><input ' + (c.t === "num" ? 'inputmode="decimal" ' : "") + 'data-k="' + c.k + '" data-t="' + c.t + '" value="' + esc(v == null ? "" : (c.t === "num" ? String(v).replace(".", ",") : v)) + '"' + (c.est ? ' data-est="' + c.est + '"' : "") + '>' + (c.u ? '<span class="u">' + c.u + '</span>' : "") + '</div></div>';
+  return '<div class="' + cls + '"><label>' + c.n + '</label><div class="in"><input ' + (c.t === "num" ? 'inputmode="decimal" ' : "") + 'data-k="' + c.k + '" data-t="' + c.t + '" value="' + esc(v == null || (c.est === "travaux" && !+v) ? "" : (c.t === "num" ? String(v).replace(".", ",") : v)) + '"' + (c.est ? ' data-est="' + c.est + '"' : "") + '>' + (c.u ? '<span class="u">' + c.u + '</span>' : "") + '</div></div>';
 }
 
 function rendreAnalyse(){
@@ -1802,7 +1855,9 @@ const tuile = (l, v, d, t, jauge) => '<div class="kpi ' + (t || "") + '"><div cl
 function synthese(b, o){
   const t = tons(o), C = 2 * Math.PI * 42;
   const sous = [b.ville, b.surface ? fmtN(b.surface) + " m²" : "", b.pieces ? (+b.pieces === 1 ? "studio" : "T" + b.pieces) : "", b.meuble ? "meublé" : ""].filter(Boolean).map(esc).join(" · ");
-  const dpe = b.dpe ? '<span class="dpe" style="background:' + DPE_C[b.dpe] + '">DPE ' + b.dpe + '</span>' : '<span class="dpe" style="background:var(--gris)">DPE ?</span>';
+  const dpe = (b.dpe ? '<span class="dpe" style="background:' + DPE_C[b.dpe] + '">DPE ' + b.dpe + '</span>' : '<span class="dpe" style="background:var(--gris)">DPE ?</span>') +
+    (o.etat && o.etat !== "bon" ? '<span class="dpe" style="background:' + (o.etat === "plateau" ? "var(--mauvais)" : "var(--moyen)") + '">' + ETATS[o.etat].n + '</span>' : "") +
+    (b.coproProcedure ? '<span class="dpe" style="background:var(--mauvais)">Copro sous procédure</span>' : "");
   const nR = o.alertes.filter(a => a[0] === "var(--mauvais)").length, nA = o.alertes.filter(a => a[0] !== "var(--gris)").length;
   return '<div class="carte syn"><div class="syn-tete">' +
       '<div class="anneau p"><svg viewBox="0 0 96 96"><circle cx="48" cy="48" r="42" fill="none" stroke="var(--carte2)" stroke-width="10"/><circle cx="48" cy="48" r="42" fill="none" stroke="' + o.couleur + '" stroke-width="10" stroke-linecap="round" stroke-dasharray="' + (C * o.score / 100) + ' ' + C + '"/></svg><div class="v"><div><b>' + o.score + '</b><small>/ 100</small></div></div></div>' +
@@ -1815,7 +1870,7 @@ function synthese(b, o){
       tuile("Brut", pct(o.brut), "objectif " + fmtN(P.objectif, 1) + " %", t.brut, o.brut / (P.objectif / 100)) +
       tuile("Net", pct(o.net), "après charges", t.net, o.net / t.objNet) +
       tuile("Net-net", pct(o.netNet), "après impôt", "", null) +
-      tuile("Cash-flow", sgn(o.cfNet), !P.credit ? "/mois, sans crédit" : simTaux != null ? "/mois, à " + fmtN(simTaux, 2) + " %" : "/mois, crédit inclus", t.cf, null) +
+      tuile("Cash-flow", sgn(o.cfNet), o.moisTravaux ? "/mois une fois loué" : !P.credit ? "/mois, sans crédit" : simTaux != null ? "/mois, à " + fmtN(simTaux, 2) + " %" : "/mois, crédit inclus", t.cf, null) +
       tuile("Loyer", eur(o.loyer), b.coloc ? o.chambres + " chambres" + (o.loyerEstime ? ", estimé" : "") : o.loyerEstime ? "estimé (marché)" : o.loyerMarche ? "marché ≈ " + eur(o.loyerMarche) : "saisi", "", null) +
       tuile("Prix / m²", eur(o.prixM2), o.ecartPrix == null ? "marché inconnu" : (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + (o.refVentes ? " vs ventes" : " vs marché"), t.m2, null) +
     '</div>' + flux(o) +
@@ -1900,7 +1955,7 @@ function rendreResultatsBase(){
   if(!b0 || !box || !syn) return;
   const b = bienSimule(b0), o = calc(b);
   // placeholders des valeurs estimées
-  const ph = { chambre: o.loyerChambreMarche ? "≈ " + fmtN(o.loyerChambreMarche) + " (estimé)" : "à saisir", chambres: o.chambres ? "≈ " + o.chambres : "", loyer: o.loyerMarche ? "≈ " + fmtN(o.loyerMarche) + " (estimé)" : "à saisir", copro: "≈ " + fmtN(o.coproEst ? o.coproTotal : 30 * (+b.surface || 0)) + " (estimé)", tf: "≈ " + fmtN(o.loyer) + " (estimé)" };
+  const ph = { travaux: o.travauxEstime ? "≈ " + fmtN(o.travaux) + " (estimé)" : "0", chambre: o.loyerChambreMarche ? "≈ " + fmtN(o.loyerChambreMarche) + " (estimé)" : "à saisir", chambres: o.chambres ? "≈ " + o.chambres : "", loyer: o.loyerMarche ? "≈ " + fmtN(o.loyerMarche) + " (estimé)" : "à saisir", copro: "≈ " + fmtN(o.coproEst ? o.coproTotal : 30 * (+b.surface || 0)) + " (estimé)", tf: "≈ " + fmtN(o.loyer) + " (estimé)" };
   document.querySelectorAll("[data-est]").forEach(el => el.placeholder = ph[el.dataset.est] || "");
   majSim(b0, b, o);
   if(!o.ok){ syn.innerHTML = '<div class="carte note">Saisis au moins le <b>prix</b> et la <b>surface</b> pour lancer le calcul.</div>'; box.innerHTML = ""; majBarre(null); if(onglet !== "fiche") rendreOnglet(b0, b, o); return; }
@@ -2194,7 +2249,8 @@ function argumentsNego(b, o){
     l.push("Le prix demandé (" + eur(o.prixM2) + "/m²) est " + pct(o.ecartPrix, 0) + " au-dessus du prix médian des ventes de la commune (" + eur(o.prixM2Ref) + "/m²).");
   if(b.dpe === "G" || b.dpe === "F") l.push("Classé " + b.dpe + " au DPE, le logement " + (b.dpe === "G" ? "ne peut plus être proposé à la location depuis 2025" : "ne pourra plus être proposé à la location à partir de 2028") + " sans rénovation énergétique, entièrement à la charge de l'acquéreur.");
   else if(b.dpe === "E") l.push("Classé E au DPE, le logement devra être rénové avant 2034 pour rester louable.");
-  if(+b.travaux) l.push("Des travaux sont à prévoir, estimés à " + eur(+b.travaux) + ".");
+  if(o.travaux) l.push((o.etat === "plateau" ? "Le logement est entièrement à rénover" : o.etat === "travaux" ? "Le logement nécessite des travaux importants" : "Des travaux sont à prévoir") + ", estimés à " + eur(o.travaux) + ", et ne pourra pas être loué pendant le chantier.");
+  if(b.coproProcedure) l.push("La copropriété fait l'objet d'une procédure, ce qui expose l'acquéreur à des charges et des travaux imprévisibles.");
   VISITE.forEach(([, items]) => items.forEach(([k, , arg]) => { if(arg && c[k] === "pb") l.push(arg + "."); }));
   const baisse = b.hist && b.hist.length ? b.hist[0].prix - b.prix : 0;
   if(baisse > 0) l.push("Le prix a déjà été baissé de " + eur(baisse) + ".");
@@ -2326,13 +2382,14 @@ function recevoirListe(d){
   const items = (d.l || []).map(x => ({
     url:String(x.u || ""), titre:String(x.t || "").slice(0, 120), prix:+x.p || null, surface:+x.s || null, pieces:+x.r || null,
     type:/maison|villa/i.test(x.k || "") ? "maison" : "appartement", ville:String(x.v || ""), cp:x.z ? String(x.z) : "",
-    lat:+x.la || null, lng:+x.lo || null, dpe:/^[a-g]$/i.test(x.d || "") ? x.d.toUpperCase() : "", photo:/^https?:/.test(x.i || "") ? x.i : ""
+    lat:+x.la || null, lng:+x.lo || null, dpe:/^[a-g]$/i.test(x.d || "") ? x.d.toUpperCase() : "", photo:/^https?:/.test(x.i || "") ? x.i : "",
+    etat: ETATS[x.e] ? x.e : "", proc: !!x.q
   })).filter(x => /^https?:\/\//.test(x.url));
-  store.set("tri", { date:Date.now(), source: (items[0] && sourceDe(items[0].url)) || sourceDe(d.u) || d.h || "", items });
+  store.set("triPage", { date:Date.now(), source: (items[0] && sourceDe(items[0].url)) || sourceDe(d.u) || d.h || "", items });
 }
 function bienDeListe(x){
   return nouveauBien({ url:x.url, source:sourceDe(x.url), type:x.type, prix:x.prix, surface:x.surface, pieces:x.pieces, ville:x.ville, cp:x.cp, dpe:x.dpe,
-    lat:x.lat, lng:x.lng, posApprox:!!x.lat, photos: x.photo ? [x.photo] : [], vignette:x.photo,
+    lat:x.lat, lng:x.lng, posApprox:!!x.lat, photos: x.photo ? [x.photo] : [], vignette:x.photo, etat:x.etat || "", coproProcedure:!!x.proc,
     titre: x.titre || [x.type === "maison" ? "Maison" : "Appartement", x.pieces ? (x.pieces === 1 ? "studio" : x.pieces + " pièces") : "", x.surface ? fmtN(x.surface, 1).replace(/,0$/, "") + " m²" : ""].filter(Boolean).join(" · ") });
 }
 let triVilles = false, triVillesFait = 0;
@@ -2354,7 +2411,7 @@ async function assurerVillesTri(items, date){
   if(n && vue === "tri") rendreTri();
 }
 function rendreTri(){
-  const T = store.get("tri", null), items = T && T.items || [];
+  const T = store.get("triPage", null), items = T && T.items || [];
   let h = '<div class="outils" style="margin-top:16px"><button class="btn petit" data-act="vue-biens">← Biens</button><div class="esp"></div>' +
     (items.length ? '<button class="btn petit dang" data-act="tri-effacer">Effacer le tri</button>' : "") + '</div>';
   if(!items.length){
@@ -2370,7 +2427,7 @@ function rendreTri(){
     h += '<div class="carte bien" style="cursor:default">' +
       (x.photo ? '<div class="tri-ph"><img loading="lazy" ' + imgAttr(x.photo) + '>' + pas + '</div>' : pas) +
       '<div class="inf"><div class="t">' + esc(b.titre) + '</div>' +
-      '<div class="s">' + esc([x.ville, x.prix ? eur(x.prix) : "", x.surface && !/m²/.test(b.titre) ? fmtN(x.surface) + " m²" : "", x.dpe ? "DPE " + x.dpe : ""].filter(Boolean).join(" · ")) + '</div>' +
+      '<div class="s">' + esc([x.ville, x.prix ? eur(x.prix) : "", x.surface && !/m²/.test(b.titre) ? fmtN(x.surface) + " m²" : "", x.dpe ? "DPE " + x.dpe : "", x.etat && x.etat !== "bon" ? ETATS[x.etat].n : "", x.proc ? "copro sous procédure" : ""].filter(Boolean).join(" · ")) + '</div>' +
       (o.ok ? '<div class="k"><span>Brut <b>' + pct(o.brut) + '</b></span>' + (o.ecartPrix != null ? '<span>m² <b>' + (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + '</b></span>' : "") +
         '<span>CF <b>' + sgn(o.cfNet) + '</b></span></div>' : '<div class="k note">Prix ou surface absent de la page</div>') + '</div>' +
       '<div class="tri-act">' + (deja ? '<button class="btn petit" data-act="ouvrir" data-id="' + deja.id + '" title="Déjà dans tes biens : voir la fiche">✓</button>'
@@ -2764,11 +2821,11 @@ document.addEventListener("click", async e => {
   }
   else if(a === "taux-auto"){ e.preventDefault(); P.tauxAuto = true; if(P.tauxMarche) P.taux = Math.round(P.tauxMarche.v * 100) / 100; sauverP(); rendreReglages(); toast("Taux du marché rétabli"); }
   else if(a === "voir-tri") allerVue("tri");
-  else if(a === "tri-effacer"){ const T = store.get("tri", null); store.set("tri", null); rendreTri(); toast("Tri effacé", { label:"Annuler", fn:() => { store.set("tri", T); rendreTri(); } }); }
+  else if(a === "tri-effacer"){ const T = store.get("triPage", null); store.set("triPage", null); rendreTri(); toast("Tri effacé", { label:"Annuler", fn:() => { store.set("triPage", T); rendreTri(); } }); }
   else if(a === "tri-ajout"){
-    const T = store.get("tri", null), x = T && T.items[+el.dataset.i]; if(!x) return;
+    const T = store.get("triPage", null), x = T && T.items[+el.dataset.i]; if(!x) return;
     const b = bienDeListe(x);
-    integrer({ url:x.url, titre:b.titre, type:x.type, prix:x.prix, surface:x.surface, pieces:x.pieces, ville:x.ville, cp:x.cp, dpe:x.dpe,
+    integrer({ url:x.url, titre:b.titre, type:x.type, prix:x.prix, surface:x.surface, pieces:x.pieces, ville:x.ville, cp:x.cp, dpe:x.dpe, etat:x.etat || null, coproProcedure:x.proc || null,
       lat:x.lat, lng:x.lng, posApprox: x.lat ? true : null, photos:b.photos, vignette:x.photo }, "liste");
     derniereLecture = null;
     rendreTri();
@@ -2895,6 +2952,26 @@ window.addEventListener("focus", verifierPressePapiers);
 document.addEventListener("change", e => { if(e.target.id === "fichier-photo"){ ajouterPhotos([...e.target.files]); e.target.value = ""; } });
 // coller une annonce suffit : l'analyse part toute seule
 document.addEventListener("paste", e => { if(e.target.id === "saisie") setTimeout(analyserSaisie, 0); });
+
+/* ---------------- plusieurs onglets ----------------
+   Le favori ouvre l'appli dans un autre onglet (ou à côté de l'appli installée) :
+   chaque onglet relit les données enregistrées dès qu'un autre les modifie, et en
+   revenant au premier plan. Sinon il afficherait, puis réenregistrerait, une liste périmée. */
+function rechargerStockage(){
+  const nb = store.get("biens", null);
+  if(Array.isArray(nb)) biens = nb;
+  P = Object.assign({}, P_DEFAUT, store.get("params", {}));
+  if(!Array.isArray(P.marche)) P.marche = MARCHE_DEFAUT.slice();
+  // on garde le bien affiché ici, sauf s'il a été supprimé ailleurs
+  if(!biens.some(b => b.id === courant)) courant = store.get("courant", biens[0] ? biens[0].id : null);
+  const a = document.activeElement;
+  if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== "range" && document.hasFocus()) return;   // ne pas couper une saisie
+  rendre();
+}
+window.addEventListener("storage", e => { if(!e.key || /^rendement\.(biens|params|triPage)$/.test(e.key)) rechargerStockage(); });
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") rechargerStockage(); });
+// nom de l'onglet : le favori l'ouvre avec ce nom, ce qui permet au navigateur de le réutiliser
+if(!window.name) window.name = "rendement";
 
 /* ---------------- démarrage ---------------- */
 $("#ver-chip").textContent = "v" + VERSION;
