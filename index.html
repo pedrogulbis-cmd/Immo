@@ -313,6 +313,11 @@ ul.argu li{margin:5px 0;line-height:1.5}
 .tri-act{display:flex;flex-direction:column;gap:6px;flex:none}
 .tri-act .btn{min-width:40px;text-align:center;padding:6px 8px;text-decoration:none}
 
+/* curseur de taux, sous le bloc Crédit */
+.taux-zone{margin-top:10px}
+.taux-zone input[type=range]{width:100%;accent-color:var(--acc);margin:10px 0 2px}
+.taux-zone .sim-ech b{font-family:var(--mono);font-weight:500;color:var(--texte)}
+
 /* comparaison */
 .coche{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--ligne);display:grid;place-items:center;color:transparent;font-size:14px;font-weight:700;align-self:center}
 .coche.on{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -396,9 +401,15 @@ ul.argu li{margin:5px 0;line-height:1.5}
 
 <script>
 "use strict";
-const VERSION = "2.2.2";
+const VERSION = "2.3.0";
 const SCHEMA = 1;
 const JOURNAL = [
+  { v:"2.3.0", d:"2026-10-24", t:"Taux du marché et curseur de taux", l:[
+    "Le taux de crédit suit tout seul le taux moyen des nouveaux crédits immobiliers en France (Banque de France, publié chaque mois par la BCE).",
+    "Un taux saisi à la main dans Réglages n'est plus remplacé ; un lien permet de revenir au taux du marché.",
+    "Dans la fiche, sous le bloc Crédit : un curseur pour essayer un autre taux et voir l'effet sur la mensualité, le coût du crédit, le cash-flow et le score.",
+    "« Garder » applique le taux essayé à tous les biens."
+  ]},
   { v:"2.2.0", d:"2026-10-24", t:"Tri d'une page de résultats", l:[
     "Le favori « → Rendement » lancé sur une page de résultats (SeLoger, Leboncoin, Bien'ici, PAP…) lit toutes les annonces affichées.",
     "Écran « Tri » : chaque annonce reçoit un score d'intérêt provisoire (loyer et charges estimés d'après le marché), les meilleures en tête.",
@@ -511,7 +522,7 @@ const P_DEFAUT = {
   ajusterSurface:true, marche:MARCHE_DEFAUT,
   detention:20, revalo:1.5, hausseLoyer:1.5, hausseCharges:2, fraisRevente:5, nomAcheteur:"",
   dmto:5, strategie:"equilibre", pRdt:30, pCf:20, pPrix:15, pDpe:10, pLoyer:10, pTri:10, pVille:5,
-  revenus:0, creditsEnCours:0, loyersPercus:0
+  revenus:0, creditsEnCours:0, loyersPercus:0, tauxAuto:true, tauxMarche:null
 };
 let P = Object.assign({}, P_DEFAUT, store.get("params", {}));
 if(!Array.isArray(P.marche)) P.marche = MARCHE_DEFAUT.slice();
@@ -914,6 +925,28 @@ async function assurerInfoVille(m){
   } catch(e){}
   finally { villeEnCours.delete(m.insee); }
   apresMarche();
+}
+
+/* ---------------- taux du marché ----------------
+   Taux moyen des nouveaux crédits à l'habitat en France (statistiques MIR de la
+   Banque de France, publiées par la BCE, qui accepte les appels depuis la page).
+   Mis à jour une fois par semaine au plus ; un taux saisi à la main n'est plus remplacé. */
+const moisLong = m => new Date(m + "-01T12:00:00").toLocaleDateString("fr-FR", { month:"long", year:"numeric" });
+async function majTauxMarche(force){
+  if(!navigator.onLine) return;
+  if(!force && P.tauxMarche && Date.now() - P.tauxMarche.date < 7 * 864e5) return;
+  try {
+    const r = await fetch("https://data-api.ecb.europa.eu/service/data/MIR/M.FR.B.A2C.AM.R.A.2250.EUR.N?lastNObservations=1&format=csvdata");
+    if(!r.ok) return;
+    const l = (await r.text()).split("\n").filter(x => x.startsWith("MIR.")).pop();
+    const c = l ? l.split(",") : [], v = +c[12], mois = c[11];
+    if(!(v > 0 && v < 15) || !/^\d{4}-\d{2}$/.test(mois)) return;
+    P.tauxMarche = { v, mois, date:Date.now() };
+    if(P.tauxAuto !== false) P.taux = Math.round(v * 100) / 100;
+    sauverP();
+    if(vue === "reglages"){ const a = document.activeElement; if(!(a && a.closest && a.closest("#v-reglages") && a.tagName === "INPUT")) rendreReglages(); }
+    else rendre();
+  } catch(e){}
 }
 
 /* ---------------- calculs ---------------- */
@@ -1684,7 +1717,7 @@ function rendreAnalyse(){
     }
   }
   h += '<div class="onglets" role="tablist">' + ONGLETS.map(([k, n]) => '<button role="tab" data-act="onglet" data-o="' + k + '">' + (n || fmtN(P.detention) + " ans") + '</button>').join("") + '</div>';
-  h += '<div id="ong-fiche"><div id="resultats"></div>';
+  h += '<div id="ong-fiche"><div id="resultats"></div><div id="taux-slot"></div>';
   h += '<h2>Données du bien</h2><div class="carte"><div class="champs">';
   const tr = lect && !lect.lienSeul ? lect.trouves : [];
   CHAMPS.forEach((g, i) => {
@@ -1782,7 +1815,7 @@ function synthese(b, o){
       tuile("Brut", pct(o.brut), "objectif " + fmtN(P.objectif, 1) + " %", t.brut, o.brut / (P.objectif / 100)) +
       tuile("Net", pct(o.net), "après charges", t.net, o.net / t.objNet) +
       tuile("Net-net", pct(o.netNet), "après impôt", "", null) +
-      tuile("Cash-flow", sgn(o.cfNet), P.credit ? "/mois, crédit inclus" : "/mois, sans crédit", t.cf, null) +
+      tuile("Cash-flow", sgn(o.cfNet), !P.credit ? "/mois, sans crédit" : simTaux != null ? "/mois, à " + fmtN(simTaux, 2) + " %" : "/mois, crédit inclus", t.cf, null) +
       tuile("Loyer", eur(o.loyer), b.coloc ? o.chambres + " chambres" + (o.loyerEstime ? ", estimé" : "") : o.loyerEstime ? "estimé (marché)" : o.loyerMarche ? "marché ≈ " + eur(o.loyerMarche) : "saisi", "", null) +
       tuile("Prix / m²", eur(o.prixM2), o.ecartPrix == null ? "marché inconnu" : (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + (o.refVentes ? " vs ventes" : " vs marché"), t.m2, null) +
     '</div>' + flux(o) +
@@ -1817,7 +1850,52 @@ function majBarre(o){
 }
 function majVisBarre(){ $("#barre-kpi").classList.toggle("hide", !(vue === "analyse" && barreO && !synVisible)); }
 
+/* curseur de taux : simTaux remplace le taux des réglages, pour la fiche affichée seulement */
+let simTaux = null, simTauxPour = null, refTaux = null, tauxReel = null, tauxZone = null;
 function rendreResultats(){
+  const b = bienCourant();
+  if(b && simTauxPour !== b.id) simTaux = null;   // un taux essayé ne suit pas d'un bien à l'autre
+  tauxReel = P.taux;
+  refTaux = b && simTaux != null ? calc(bienSimule(b)) : null;
+  const sv = P;
+  if(simTaux != null) P = Object.assign({}, P, { taux:simTaux });
+  try { rendreResultatsBase(); } finally { P = sv; }
+}
+function placerTaux(o){
+  if(!tauxZone){
+    tauxZone = document.createElement("div"); tauxZone.className = "carte taux-zone";
+    tauxZone.innerHTML = '<div class="lig"><div class="l"><b>Et si le taux change ?</b><div class="d" id="taux-t"></div></div>' +
+      '<button class="btn petit hide" id="taux-garder" data-act="taux-garder">Garder</button><button class="btn petit hide" id="taux-reset" data-act="taux-reset">Annuler</button></div>' +
+      '<input type="range" id="taux-r" min="1" max="6" step="0.05" aria-label="Taux nominal simulé">' +
+      '<div class="sim-ech"><span>1 %</span><b id="taux-v"></b><span>6 %</span></div><div class="note" id="taux-impact" style="margin-top:6px;line-height:1.55"></div>';
+    tauxZone.querySelector("#taux-r").addEventListener("input", e => {
+      const v = Math.round(+e.target.value * 100) / 100;
+      simTaux = Math.abs(v - tauxReel) < 0.001 ? null : v; simTauxPour = courant;
+      rendreResultats();
+    });
+  }
+  // placé une seule fois par affichage de la fiche : le curseur n'est jamais recréé pendant qu'on le fait glisser
+  const slot = $("#taux-slot"); if(slot) slot.replaceWith(tauxZone);
+  tauxZone.classList.toggle("hide", !P.credit || !o.ok);
+  if(!P.credit || !o.ok) return;
+  const r = tauxZone.querySelector("#taux-r"), taux = simTaux != null ? simTaux : tauxReel;
+  if(document.activeElement !== r) r.value = taux;
+  tauxZone.querySelector("#taux-v").textContent = fmtN(taux, 2) + " %";
+  tauxZone.querySelector("#taux-t").innerHTML = P.tauxMarche && P.tauxAuto !== false
+    ? "Taux du marché : " + fmtN(tauxReel, 2) + " % (" + moisLong(P.tauxMarche.mois) + ")" : "Taux des réglages : " + fmtN(tauxReel, 2) + " %";
+  tauxZone.querySelector("#taux-garder").classList.toggle("hide", simTaux == null);
+  tauxZone.querySelector("#taux-reset").classList.toggle("hide", simTaux == null);
+  const n = P.duree * 12, cout = o.mens * n - o.emprunt;
+  let txt;
+  if(simTaux == null) txt = "Fais glisser pour voir l'effet d'un autre taux sur ce bien. Coût total du crédit au taux actuel : " + eur(cout) + ".";
+  else {
+    const rf = refTaux, coutRef = rf.mens * n - rf.emprunt;
+    txt = "À " + fmtN(simTaux, 2) + " % : mensualité <b>" + eur(o.mens) + "</b> (" + sgn(o.mens - rf.mens) + "), coût du crédit <b>" + eur(cout) + "</b> (" + sgn(cout - coutRef) + "), cash-flow <b>" + sgn(o.cfNet) + "</b>/mois (" + sgn(o.cfNet - rf.cfNet) + "), score " + o.score + " (" + (o.score - rf.score >= 0 ? "+" : "−") + Math.abs(o.score - rf.score) + ")." +
+      (Math.abs(o.cfNet - rf.cfNet) < Math.abs(o.mens - rf.mens) * 0.8 ? " Le cash-flow bouge moins que la mensualité : les intérêts en plus réduisent l'impôt." : "") + " Toute la fiche est recalculée à ce taux.";
+  }
+  tauxZone.querySelector("#taux-impact").innerHTML = txt;
+}
+function rendreResultatsBase(){
   const b0 = bienCourant(), box = $("#resultats"), syn = $("#synthese");
   if(!b0 || !box || !syn) return;
   const b = bienSimule(b0), o = calc(b);
@@ -1859,10 +1937,7 @@ function rendreResultats(){
       (o.gli ? ligne("Garantie loyers impayés (" + fmtN(P.gli, 1) + " %)", "−" + eur(o.gli)) : "") +
       ligne("Revenu net avant crédit et impôt", eur(o.revenuNet), true) +
     '</table></details>' +
-    (P.credit ? '<details class="pli"><summary>Crédit</summary><table class="t">' +
-      ligne("Apport", eur(o.apport)) + ligne("Emprunt sur " + fmtN(P.duree) + " ans à " + fmtN(P.taux, 2) + " %", eur(o.emprunt)) +
-      ligne("Mensualité (assurance " + fmtN(P.assurance, 2) + " % comprise)", eur(o.mens)) + ligne("Intérêts 1re année", eur(o.interets1)) +
-    '</table></details>' : "") +
+
     '<details class="pli"><summary>Impôt (1re année)</summary><table class="t">' +
       ligne("Régime le plus avantageux", '<span style="font-family:var(--sans)">' + esc(o.regime) + '</span>') +
       ligne(o.impot >= 0 ? "Impôt et prélèvements sociaux" : "Économie d'impôt (déficit foncier)", sgn(-o.impot), true) +
@@ -1870,8 +1945,18 @@ function rendreResultats(){
     '<details class="pli"><summary>Cash-flow mensuel</summary><table class="t">' +
       ligne("Revenu net ÷ 12", eur(o.revenuNet / 12)) + (P.credit ? ligne("Mensualité de crédit", "−" + eur(o.mens)) : "") +
       ligne("Cash-flow avant impôt", sgn(o.cf)) + ligne("Impôt ÷ 12", sgn(-o.impot / 12)) + ligne("Cash-flow après impôt", sgn(o.cfNet), true) +
-    '</table></details></div>';
+    '</table></details>' +
+    // en dernier : le curseur de taux (hors de cette carte, jamais redessiné) s'affiche juste en dessous
+    (P.credit ? '<details class="pli" open><summary>Crédit</summary><table class="t">' +
+      ligne("Apport", eur(o.apport)) + ligne("Emprunt sur " + fmtN(P.duree) + " ans à " + fmtN(P.taux, 2) + " %" + (simTaux != null ? ' <span class="est">simulé</span>' : ""), eur(o.emprunt)) +
+      ligne("Mensualité (assurance " + fmtN(P.assurance, 2) + " % comprise)", eur(o.mens)) + ligne("Intérêts 1re année", eur(o.interets1)) +
+      ligne("Coût total du crédit", eur(o.mens * P.duree * 12 - o.emprunt), true) +
+    '</table></details>' : "") + '</div>';
+  const ouverts = {};
+  box.querySelectorAll("details.pli").forEach(d => { ouverts[d.querySelector("summary").textContent] = d.open; });
   box.innerHTML = h;
+  box.querySelectorAll("details.pli").forEach(d => { const s = d.querySelector("summary").textContent; if(s in ouverts) d.open = ouverts[s]; });
+  placerTaux(o);
 }
 
 const ligne = (l, v, tot) => '<tr' + (tot ? ' class="tot"' : "") + '><td>' + l + '</td><td class="r">' + v + '</td></tr>';
@@ -2407,7 +2492,9 @@ const REGL = [
     { k:"credit", n:"Financer avec un crédit", t:"check" },
     { k:"apportMode", n:"Apport", t:"select", o:[["frais","Frais de notaire"],["zero","Aucun (110 %)"],["fixe","Montant fixe"]] },
     { k:"apportFixe", n:"Apport fixe", u:"€" },
-    { k:"taux", n:"Taux nominal", u:"%", d:"≈ 3,7 % sur 20 ans en octobre 2026" },
+    { k:"taux", n:"Taux nominal", u:"%", d: () => !P.tauxMarche ? "Taux du marché mis à jour automatiquement dès la connexion"
+      : P.tauxAuto !== false ? "Taux moyen des nouveaux crédits immobiliers en France, " + moisLong(P.tauxMarche.mois) + " (Banque de France via BCE) : mis à jour tout seul"
+      : "Taux du marché : " + fmtN(P.tauxMarche.v, 2) + " % (" + moisLong(P.tauxMarche.mois) + ") · <a href=\"#\" data-act=\"taux-auto\">revenir au taux du marché</a>" },
     { k:"duree", n:"Durée", u:"ans" },
     { k:"assurance", n:"Assurance emprunteur", u:"%/an" }
   ]},
@@ -2433,7 +2520,7 @@ function rendreReglages(){
       const v = P[c.k];
       if(c.t === "check") return '<div class="champ large"><label class="bascule"><span>' + c.n + (c.d ? '<div class="note" style="font-size:12px">' + c.d + '</div>' : "") + '</span><input type="checkbox" data-p="' + c.k + '"' + (v ? " checked" : "") + '></label></div>';
       if(c.t === "select") return '<div class="champ"><label>' + c.n + '</label><div class="in"><select data-p="' + c.k + '">' + c.o.map(([k, n]) => '<option value="' + k + '"' + (String(v) === k ? " selected" : "") + '>' + n + '</option>').join("") + '</select></div></div>';
-      return '<div class="champ"><label>' + c.n + '</label><div class="in"><input inputmode="decimal" data-p="' + c.k + '" value="' + esc(String(v).replace(".", ",")) + '"><span class="u">' + c.u + '</span></div>' + (c.d ? '<div class="note" style="font-size:11.5px">' + c.d + '</div>' : "") + '</div>';
+      return '<div class="champ"><label>' + c.n + '</label><div class="in"><input inputmode="decimal" data-p="' + c.k + '" value="' + esc(String(v).replace(".", ",")) + '"><span class="u">' + c.u + '</span></div>' + (c.d ? '<div class="note" style="font-size:11.5px">' + (typeof c.d === "function" ? c.d() : c.d) + '</div>' : "") + '</div>';
     }).join("");
     h += '</div></div>';
   });
@@ -2476,7 +2563,7 @@ function rendreReglages(){
     const k = el.dataset.p;
     if(el.type === "checkbox") P[k] = el.checked;
     else if(el.tagName === "SELECT") P[k] = /^\d+$/.test(el.value) ? +el.value : el.value;
-    else { const v = decimal(el.value); if(isNaN(v)) return; P[k] = v; }
+    else { const v = decimal(el.value); if(isNaN(v)) return; P[k] = v; if(k === "taux") P.tauxAuto = false; }
     sauverP();
     if(k === "strategie"){
       // en passant en « Personnalisée », on part des poids de la stratégie affichée jusque-là
@@ -2670,6 +2757,12 @@ document.addEventListener("click", async e => {
   else if(a === "affichage"){ affichage = affichage === "carte" ? "liste" : "carte"; store.set("affichage", affichage); modeComp = false; selComp = []; rendreBiens(); }
   else if(a === "lancer-comp") allerVue("comparer");
   else if(a === "pdf") imprimerFiche();
+  else if(a === "taux-reset"){ simTaux = null; rendreResultats(); }
+  else if(a === "taux-garder"){
+    const ancien = P.taux, auto = P.tauxAuto; P.taux = simTaux; P.tauxAuto = false; simTaux = null; sauverP(); rendreResultats();
+    toast("Taux de " + fmtN(P.taux, 2) + " % utilisé pour tous les biens", { label:"Annuler", fn:() => { P.taux = ancien; P.tauxAuto = auto; sauverP(); rendre(); } });
+  }
+  else if(a === "taux-auto"){ e.preventDefault(); P.tauxAuto = true; if(P.tauxMarche) P.taux = Math.round(P.tauxMarche.v * 100) / 100; sauverP(); rendreReglages(); toast("Taux du marché rétabli"); }
   else if(a === "voir-tri") allerVue("tri");
   else if(a === "tri-effacer"){ const T = store.get("tri", null); store.set("tri", null); rendreTri(); toast("Tri effacé", { label:"Annuler", fn:() => { store.set("tri", T); rendreTri(); } }); }
   else if(a === "tri-ajout"){
@@ -2808,6 +2901,7 @@ $("#ver-chip").textContent = "v" + VERSION;
 if(!recevoir()) rendre();
 setTimeout(() => rafraichirMarche(false), 400);
 setTimeout(nettoyerPhotos, 5000);
+setTimeout(() => majTauxMarche(false), 700);
 window.addEventListener("online", () => rafraichirMarche(false));
 </script>
 </body>

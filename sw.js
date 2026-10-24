@@ -2,7 +2,7 @@
    S'installe tout de suite : l'app devient installable dès la première visite
    et reste disponible hors ligne. Incrémenter CACHE à chaque mise en ligne.
    Les photos des annonces vont dans un cache à part, gardé d'une version à l'autre. */
-const CACHE = "rendement-13";
+const CACHE = "rendement-14";
 const PHOTOS = "rendement-photos";
 const BASE = ["./", "./index.html",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png",
