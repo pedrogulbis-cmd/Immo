@@ -396,7 +396,7 @@ ul.argu li{margin:5px 0;line-height:1.5}
 
 <script>
 "use strict";
-const VERSION = "2.2.1";
+const VERSION = "2.2.2";
 const SCHEMA = 1;
 const JOURNAL = [
   { v:"2.2.0", d:"2026-10-24", t:"Tri d'une page de résultats", l:[
@@ -404,7 +404,8 @@ const JOURNAL = [
     "Écran « Tri » : chaque annonce reçoit un score d'intérêt provisoire (loyer et charges estimés d'après le marché), les meilleures en tête.",
     "＋ pour ajouter une annonce à tes biens, ↗ pour l'ouvrir et lancer le favori pour l'analyse complète.",
     "Recrée le favori dans Réglages → Import pour en profiter.",
-    "2.2.1 : SeLoger (nouveaux identifiants d'annonce) : toutes les annonces de la page sont lues, avec la vraie photo et le DPE."
+    "2.2.1 : SeLoger (nouveaux identifiants d'annonce) : toutes les annonces de la page sont lues, avec la vraie photo et le DPE.",
+    "2.2.2 : testé sur Leboncoin, SeLoger, Logic-Immo, Bien'ici, PAP et Figaro Immobilier. Bien'ici : toutes les annonces ; PAP : bon prix en cas de baisse, ville lue dans le lien ; Figaro : ville, DPE et photos ; garages et terrains écartés du tri."
   ]},
   { v:"2.1.1", d:"2026-10-23", t:"Favori plus parlant", l:[
     "Le favori affiche un bandeau vert sur l'annonce dès qu'il se lance (ou l'erreur, en rouge) : on sait tout de suite s'il a marché.",
@@ -1062,7 +1063,8 @@ function sourceDe(u){
        : h.includes("pap.fr") ? "pap" : h.includes("logic-immo") ? "logic-immo" : h.includes("figaro") ? "figaro immobilier" : h ? "web" : "";
 }
 function parseTexte(txt){
-  const t = String(txt || "").replace(/\r/g, "");
+  // « Ancien prix : 585.000 € » (PAP, baisse de prix) n'est pas le prix de vente
+  const t = String(txt || "").replace(/\r/g, "").replace(/ancien\s+prix\s*:?\s*[\d .\u00a0\u202f]+€/gi, "");
   const f = {};
   let m;
   // prix : d'abord un libellé « Prix », sinon le premier montant plausible qui n'est ni un €/m², ni un loyer, ni des charges
@@ -1092,7 +1094,9 @@ function parseTexte(txt){
   if(/\bstudio\b/i.test(t) && !f.pieces) f.pieces = 1;
   const im = t.search(/\b(maison|villa|pavillon)\b/i), ia = t.search(/\b(appartement|studio|duplex|loft|T\d)\b/i);
   if(im >= 0 || ia >= 0) f.type = (im >= 0 && (ia < 0 || im < ia)) ? "maison" : "appartement";
-  if((m = t.match(/(?:classe\s+[ée]nergie|DPE|performance\s+[ée]nerg[ée]tique|[ée]tiquette\s+[ée]nergie|consommation\s+[ée]nerg[ée]tique)\s*(?:\(?DPE\)?)?\s*:?\s*(?:classe\s*)?\(?([A-G])\b(?![a-zà-ÿ'])/i))) f.dpe = m[1].toUpperCase();
+  // une échelle complète « A B C D… » (PAP) ne dit pas quelle lettre est la bonne : on l'ignore
+  if((m = t.match(/(?:classe\s+[ée]nergie|DPE|performance\s+[ée]nerg[ée]tique|[ée]tiquette\s+[ée]nergie|consommation\s+[ée]nerg[ée]tique|bilan\s+[ée]nergie(?:\s+du\s+bien)?)\s*(?:\(?DPE\)?)?\s*:?\s*(?:classe\s*)?\(?([A-G])\b(?![a-zà-ÿ'])/i))
+    && !/^\s*B\s+C\s+D/.test(t.slice(m.index + m[0].length, m.index + m[0].length + 40).replace(/\s+/g, " "))) f.dpe = m[1].toUpperCase();
   // charges de copropriété (annuelles)
   if((m = t.match(new RegExp("quote[- ]part[^\\n€]{0,80}?" + MONT + SP + "?€", "i")))) f.copro = argent(m[1]);
   else if((m = t.match(new RegExp("charges?(?:\\s+de\\s+copro\\w*)?(?:\\s+courantes)?\\s*(?:annuelles?|par\\s+an|\\/\\s?an)\\s*:?[^\\d€\\n]{0,20}" + MONT + SP + "?€", "i")))) f.copro = argent(m[1]);
@@ -1124,6 +1128,7 @@ function parseLD(liste){
     if(!o || typeof o !== "object") return;
     if(Array.isArray(o)){ o.forEach(visite); return; }
     if(o["@graph"]) visite(o["@graph"]);
+    if(/Breadcrumb|Organization|WebSite/i.test(String(o["@type"]))) return;   // fil d'Ariane, éditeur du site : rien sur le bien
     const of = o.offers && (Array.isArray(o.offers) ? o.offers[0] : o.offers);
     if(of && of.price && f.prix == null){ const v = argent(of.price); if(v >= 10000) f.prix = v; }
     if(o.price && f.prix == null){ const v = argent(o.price); if(v >= 10000) f.prix = v; }
@@ -1133,7 +1138,7 @@ function parseLD(liste){
     if(o.geo && f.lat == null && +o.geo.latitude && +o.geo.longitude){ f.lat = +o.geo.latitude; f.lng = +o.geo.longitude; f.posApprox = true; }
     const ad = o.address || (o.itemOffered && o.itemOffered.address);
     if(ad && typeof ad === "object"){ if(ad.addressLocality && !f.ville) f.ville = ad.addressLocality; if(ad.postalCode && !f.cp) f.cp = String(ad.postalCode); }
-    if(o.name && !f.titre && typeof o.name === "string" && o.name.length < 140) f.titre = o.name;
+    if(o.name && !f.titre && typeof o.name === "string" && o.name.length < 140 && !/ListItem|Breadcrumb|Organization|WebSite|WebPage|Person|Place/i.test(String(o["@type"]))) f.titre = o.name;
     if(o.image && !f.photos){
       const im = [].concat(o.image).map(x => typeof x === "string" ? x : x && (x.url || x.contentUrl)).filter(u => /^https?:\/\//.test(u || ""));
       if(im.length) f.photos = im.slice(0, 10);
@@ -1142,6 +1147,12 @@ function parseLD(liste){
   };
   (liste || []).forEach(s => { try { visite(JSON.parse(s)); } catch(e){} });
   return f;
+}
+/* « Vente maison 135&nbsp;m² Saint-Nazaire (44600) - 545.000 € | PAP » → « Maison 135 m² Saint-Nazaire (44600) » */
+function nettoyerTitre(s){
+  const t = String(s).replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s*[|:]\s*(particulier|figaro|seloger|leboncoin|bien.?ici|logic).*$/i, "")
+    .replace(/^(achat|vente)\s+/i, "").replace(/\s+à vendre\b/i, "").replace(/[,\s]*[-–]?\s*\d[\d .\u00a0\u202f]{3,}\s*€.*$/, "").replace(/\s+/g, " ").trim();
+  return t ? (t[0].toUpperCase() + t.slice(1)).slice(0, 120) : s;
 }
 function parsePayload(d){
   let f = {};
@@ -1172,11 +1183,14 @@ function parsePayload(d){
   for(const k in ld) if(f[k] == null) f[k] = ld[k];
   const tx = parseTexte(d.x || "");
   for(const k in tx) if(f[k] == null && k !== "url") f[k] = tx[k];
+  const tt = parseTexte(d.t || "");
+  for(const k of ["ville", "cp", "surface", "pieces"]) if(f[k] == null && tt[k] != null) f[k] = tt[k];
   const pi = Array.isArray(d.pi) ? d.pi.filter(u => /^https?:\/\//.test(u)) : [];
   if(!(d.lbc && Array.isArray(d.lbc.im) && d.lbc.im.length) && pi.length > (f.photos || []).length) f.photos = pi.slice(0, 10);
   if(!f.photos && /^https?:\/\//.test(d.og || "")) f.photos = [d.og];
   if(!f.vignette && f.photos) f.vignette = f.photos[0];
   if(!f.titre && d.t) f.titre = String(d.t).split(/[|–-]\s*(leboncoin|seloger|bien'ici)/i)[0].trim().slice(0, 120);
+  if(f.titre) f.titre = nettoyerTitre(f.titre);
   f.url = d.u || f.url || "";
   f.source = sourceDe(d.h || f.url);
   return f;
@@ -1251,8 +1265,11 @@ function recevoir(){
   if(h.startsWith("#import=")){
     try {
       const d = JSON.parse(decodeURIComponent(escape(atob(h.slice(8)))));
-      integrer(parsePayload(d), "favori");
+      const f = parsePayload(d);
       history.replaceState(null, "", location.pathname + location.search);
+      // page pas encore affichée (Bien'ici met quelques secondes) : on ne crée pas de fiche vide
+      if(!f.prix && !f.surface){ allerVue("biens"); toast("Rien de lisible sur cette page : attends qu'elle soit entièrement affichée, puis relance le favori"); return true; }
+      integrer(f, "favori");
       allerVue("analyse");
       return true;
     } catch(e){ toast("Import illisible"); history.replaceState(null, "", location.pathname); }
@@ -1281,12 +1298,12 @@ window.addEventListener("hashchange", () => { if(recevoir()) rendre(); });
 function lirePhotosPage(){
   try {
     var racine = location.hostname.split(".").slice(-2)[0];
-    var html = document.documentElement.innerHTML.split("\\u002F").join("/").split("\\/").join("/");
-    var liste = html.match(/https?:\/\/[^"'\s<>()\\]+?\.(?:jpe?g|webp)(?:\?[^"'\s<>()\\]*)?/gi) || [];
+    var html = document.documentElement.innerHTML.split("\\u002F").join("/").split("\\/").join("/").split("&amp;").join("&");
+    var liste = (html.match(/https?:\/\/[^"'\s<>()\\]+?\.(?:jpe?g|webp)(?:\?[^"'\s<>()\\]*)?/gi) || []).concat(racine === "lefigaro" ? html.match(/https:\/\/lh\d\.googleusercontent\.com\/[A-Za-z0-9_\-]{40,}/g) || [] : []);
     var vus = {}, ordre = [];
     liste.forEach(function(u){
       try {
-        if((new URL(u).hostname.indexOf(racine) < 0 && !/cloudimg\.io/.test(u)) || /logo|icon|avatar|picto|sprite|placeholder|marker|agence|agency|banner/i.test(u)) return;
+        if((new URL(u).hostname.indexOf(racine) < 0 && !/cloudimg\.io|googleusercontent/.test(u)) || /logo|icon|avatar|picto|sprite|placeholder|marker|agence|agency|banner/i.test(u)) return;
         var morceaux = u.split("?")[0].split("/"), cle = morceaux.pop(), taille = Math.max.apply(null, (morceaux.join("/").match(/\d{3,4}/g) || ["0"]).map(Number));
         if(!vus[cle]){ vus[cle] = { u:u, t:taille }; ordre.push(cle); }
         else if(taille > vus[cle].t) vus[cle] = { u:u, t:taille };
@@ -1303,7 +1320,7 @@ function appUrl(){ return location.href.split("#")[0].split("?")[0]; }
    ville et photo. */
 function lireListePage(){
   try {
-    var estAnnonce = function(p){ var s = p.split("/").filter(Boolean).pop() || ""; return /\d{6,}/.test(p) || /^(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9]{8,}(\.htm)?$/.test(s); };
+    var estAnnonce = function(p){ var seg = p.split("/").filter(Boolean), s = seg[seg.length - 1] || ""; return /\d{6,}/.test(p) || /^(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9]{8,}(\.htm)?$/.test(s) || (/^annonces?$/.test(seg[0] || "") && seg.length >= 3); };
     if(estAnnonce(location.pathname)) return [];
     var res = [], vus = {};
     var num = function(s){ return parseFloat(String(s).replace(/[\s\u00a0\u202f.]/g, "").replace(",", ".")); };
@@ -1312,6 +1329,7 @@ function lireListePage(){
       var n = document.getElementById("__NEXT_DATA__"), j = n && JSON.parse(n.textContent), sd = j && j.props && j.props.pageProps && j.props.pageProps.searchData;
       ((sd && sd.ads) || []).forEach(function(a){
         var at = {}; (a.attributes || []).forEach(function(x){ at[x.key] = x; });
+        if(at.real_estate_type && !/maison|appartement/i.test(at.real_estate_type.value_label || "")) return;
         var im = a.images || {};
         ajoute({ u:a.url, t:a.subject, p:[].concat(a.price)[0], s:at.square && num(at.square.value), r:at.rooms && +at.rooms.value,
           k:at.real_estate_type && at.real_estate_type.value_label, v:a.location && a.location.city, z:a.location && a.location.zipcode,
@@ -1327,16 +1345,21 @@ function lireListePage(){
         if(url.hostname.replace(/^www\./, "") !== ici || !estAnnonce(url.pathname) || vus[a.href.split(/[?#]/)[0]]) return;
         var c = a, txt = "";
         for(var k = 0; k < 8 && c; k++){ txt = c.innerText || ""; if(/€/.test(txt) && /m²|m2/.test(txt)) break; c = c.parentElement; }
-        if(!c || !/€/.test(txt) || !/m²|m2/.test(txt) || txt.length > 1500) return;
-        var ids = {};
-        [].slice.call(c.querySelectorAll("a[href]")).forEach(function(x){ if(estAnnonce(x.pathname || "")) ids[x.href.split(/[?#]/)[0]] = 1; });
-        if(Object.keys(ids).length > 1) return;
+        if(!c || !/€/.test(txt) || !/m²|m2/.test(txt) || txt.length > 2500) return;
+        var nbIds = function(el){ var ids = {}; [].slice.call(el.querySelectorAll("a[href]")).forEach(function(x){ if(estAnnonce(x.pathname || "")) ids[x.href.split(/[?#]/)[0]] = 1; }); return Object.keys(ids).length; };
+        if(nbIds(c) > 1) return;
+        for(var k2 = 0; k2 < 6 && c.parentElement && nbIds(c.parentElement) <= 1 && (c.parentElement.innerText || "").length < 2500; k2++) c = c.parentElement;
+        txt = c.innerText || "";
         var prix = null, m, re = /(\d{1,3}(?:[ \u00a0\u202f.]\d{3})+|\d{5,7})[ \u00a0\u202f]?€(?!\s*\/)/g;
         while((m = re.exec(txt))){ var v = num(m[1]); if(v >= 10000 && v <= 5e6){ prix = v; break; } }
         var s = (txt.match(/(\d+(?:[.,]\d+)?)\s?m(?:²|2)(?![\w\/])/) || [])[1];
         var r = (txt.match(/(\d+)\s?pi[eè]ces?/i) || txt.match(/\bT(\d)\b/) || [])[1] || (/studio/i.test(txt) ? 1 : null);
-        var lieu = txt.match(/([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-][A-Za-zÀ-ÿ'’\-]+){0,3})\s*\((\d{5})\)/) || txt.match(/(\d{5})\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-][A-Za-zÀ-ÿ'’\-]+){0,3})/);
+        var lieu = txt.match(/([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-][A-Za-z0-9À-ÿ'’\-]+){0,3})\s*\((\d{5})\)/) || txt.match(/(\d{5})\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-][A-Za-zÀ-ÿ'’\-]+){0,3})/);
         var ville = lieu ? (/^\d/.test(lieu[1]) ? lieu[2] : lieu[1]) : "", cp = lieu ? (/^\d/.test(lieu[1]) ? lieu[1] : lieu[2]) : "";
+        var dep = !lieu && txt.match(/([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-][A-Za-zÀ-ÿ'’\-]+){0,3})\s*\((\d{2}|2[AB])\)/);
+        if(dep) ville = dep[1];
+        var slug = !ville && url.pathname.match(/\/annonces?\/[a-z]+-([a-z0-9\-]+?)(?:-(\d{5}))?(?:-quartier-.*)?-r\d+$/);
+        if(slug){ ville = slug[1].replace(/(^|-)([a-z])/g, function(x, s1, l){ return s1 + l.toUpperCase(); }); cp = slug[2] || ""; }
         var dpe = (txt.match(/(?:DPE|énergie)\s*:?\s*([A-G])\b/i) || txt.match(/^\s*([A-G])\s*$/m) || [])[1];
         var img = null, aire = 0;
         [].slice.call(c.querySelectorAll("img")).forEach(function(x){ var b = x.getBoundingClientRect(), s2 = b.width * b.height; if(b.width >= 100 && s2 > aire){ aire = s2; img = x; } });
@@ -1361,7 +1384,7 @@ function codeFavori(){
     "var d={u:location.href.split('#')[0].split('?')[0],h:location.hostname,t:document.title};" +
     "try{var n=document.getElementById('__NEXT_DATA__');if(n){var j=JSON.parse(n.textContent),a=j&&j.props&&j.props.pageProps&&j.props.pageProps.ad;" +
     "if(a){d.lbc={s:a.subject,p:a.price,b:(a.body||'').slice(0,5000),c:a.location&&a.location.city,z:a.location&&a.location.zipcode,la:a.location&&a.location.lat,lo:a.location&&a.location.lng,at:(a.attributes||[]).map(function(x){return[x.key,x.value,x.value_label]}),im:((a.images&&(a.images.urls_large||a.images.urls))||[]).slice(0,10),th:((a.images&&a.images.urls_thumb)||[]).slice(0,1)}}}}catch(e){}" +
-    "try{d.ld=[].slice.call(document.querySelectorAll('script[type=\"application/ld+json\"]')).map(function(s){return s.textContent.slice(0,4000)}).slice(0,6)}catch(e){}" +
+    "try{d.ld=[].slice.call(document.querySelectorAll('script[type=\"application/ld+json\"]')).map(function(s){return s.textContent.slice(0,30000)}).slice(0,6)}catch(e){}" +
     "try{d.pi=" + fn(lirePhotosPage) + "}catch(e){}" +
     "d.og=(document.querySelector('meta[property=\"og:image\"]')||{}).content||'';" +
     "d.x=(document.body.innerText||'').slice(0,9000);" +
