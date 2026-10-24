@@ -396,14 +396,15 @@ ul.argu li{margin:5px 0;line-height:1.5}
 
 <script>
 "use strict";
-const VERSION = "2.2.0";
+const VERSION = "2.2.1";
 const SCHEMA = 1;
 const JOURNAL = [
   { v:"2.2.0", d:"2026-10-24", t:"Tri d'une page de résultats", l:[
     "Le favori « → Rendement » lancé sur une page de résultats (SeLoger, Leboncoin, Bien'ici, PAP…) lit toutes les annonces affichées.",
     "Écran « Tri » : chaque annonce reçoit un score d'intérêt provisoire (loyer et charges estimés d'après le marché), les meilleures en tête.",
     "＋ pour ajouter une annonce à tes biens, ↗ pour l'ouvrir et lancer le favori pour l'analyse complète.",
-    "Recrée le favori dans Réglages → Import pour en profiter."
+    "Recrée le favori dans Réglages → Import pour en profiter.",
+    "2.2.1 : SeLoger (nouveaux identifiants d'annonce) : toutes les annonces de la page sont lues, avec la vraie photo et le DPE."
   ]},
   { v:"2.1.1", d:"2026-10-23", t:"Favori plus parlant", l:[
     "Le favori affiche un bandeau vert sur l'annonce dès qu'il se lance (ou l'erreur, en rouge) : on sait tout de suite s'il a marché.",
@@ -1285,7 +1286,7 @@ function lirePhotosPage(){
     var vus = {}, ordre = [];
     liste.forEach(function(u){
       try {
-        if(new URL(u).hostname.indexOf(racine) < 0 || /logo|icon|avatar|picto|sprite|placeholder|marker|agence|agency|banner/i.test(u)) return;
+        if((new URL(u).hostname.indexOf(racine) < 0 && !/cloudimg\.io/.test(u)) || /logo|icon|avatar|picto|sprite|placeholder|marker|agence|agency|banner/i.test(u)) return;
         var morceaux = u.split("?")[0].split("/"), cle = morceaux.pop(), taille = Math.max.apply(null, (morceaux.join("/").match(/\d{3,4}/g) || ["0"]).map(Number));
         if(!vus[cle]){ vus[cle] = { u:u, t:taille }; ordre.push(cle); }
         else if(taille > vus[cle].t) vus[cle] = { u:u, t:taille };
@@ -1302,6 +1303,8 @@ function appUrl(){ return location.href.split("#")[0].split("?")[0]; }
    ville et photo. */
 function lireListePage(){
   try {
+    var estAnnonce = function(p){ var s = p.split("/").filter(Boolean).pop() || ""; return /\d{6,}/.test(p) || /^(?=.*\d)(?=.*[A-Za-z])[A-Za-z0-9]{8,}(\.htm)?$/.test(s); };
+    if(estAnnonce(location.pathname)) return [];
     var res = [], vus = {};
     var num = function(s){ return parseFloat(String(s).replace(/[\s\u00a0\u202f.]/g, "").replace(",", ".")); };
     var ajoute = function(o){ var k = String(o.u || "").split(/[?#]/)[0]; if(!k || vus[k]) return; vus[k] = 1; res.push(o); };
@@ -1321,22 +1324,24 @@ function lireListePage(){
     [].slice.call(document.querySelectorAll("a[href]")).forEach(function(a){
       try {
         var url = new URL(a.href);
-        if(url.hostname.replace(/^www\./, "") !== ici || !/\d{6,}/.test(url.pathname) || vus[a.href.split(/[?#]/)[0]]) return;
+        if(url.hostname.replace(/^www\./, "") !== ici || !estAnnonce(url.pathname) || vus[a.href.split(/[?#]/)[0]]) return;
         var c = a, txt = "";
         for(var k = 0; k < 8 && c; k++){ txt = c.innerText || ""; if(/€/.test(txt) && /m²|m2/.test(txt)) break; c = c.parentElement; }
         if(!c || !/€/.test(txt) || !/m²|m2/.test(txt) || txt.length > 1500) return;
         var ids = {};
-        [].slice.call(c.querySelectorAll("a[href]")).forEach(function(x){ if(/\d{6,}/.test(x.pathname || "")) ids[x.href.split(/[?#]/)[0]] = 1; });
+        [].slice.call(c.querySelectorAll("a[href]")).forEach(function(x){ if(estAnnonce(x.pathname || "")) ids[x.href.split(/[?#]/)[0]] = 1; });
         if(Object.keys(ids).length > 1) return;
-        var prix = null, m, re = /(\d{1,3}(?:[\s\u00a0\u202f.]\d{3})+|\d{5,7})\s?€(?!\s*\/)/g;
+        var prix = null, m, re = /(\d{1,3}(?:[ \u00a0\u202f.]\d{3})+|\d{5,7})[ \u00a0\u202f]?€(?!\s*\/)/g;
         while((m = re.exec(txt))){ var v = num(m[1]); if(v >= 10000 && v <= 5e6){ prix = v; break; } }
         var s = (txt.match(/(\d+(?:[.,]\d+)?)\s?m(?:²|2)(?![\w\/])/) || [])[1];
         var r = (txt.match(/(\d+)\s?pi[eè]ces?/i) || txt.match(/\bT(\d)\b/) || [])[1] || (/studio/i.test(txt) ? 1 : null);
         var lieu = txt.match(/([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-][A-Za-zÀ-ÿ'’\-]+){0,3})\s*\((\d{5})\)/) || txt.match(/(\d{5})\s+([A-ZÀ-Ý][A-Za-zÀ-ÿ'’\-]+(?:[ \-][A-Za-zÀ-ÿ'’\-]+){0,3})/);
         var ville = lieu ? (/^\d/.test(lieu[1]) ? lieu[2] : lieu[1]) : "", cp = lieu ? (/^\d/.test(lieu[1]) ? lieu[1] : lieu[2]) : "";
-        var dpe = (txt.match(/(?:DPE|énergie)\s*:?\s*([A-G])\b/i) || [])[1];
-        var img = c.querySelector("img"), src = img && (img.currentSrc || img.getAttribute("data-src") || img.src || "");
-        ajoute({ u:a.href, t:(txt.split("\n").filter(function(x){ return x.trim().length > 3 && !/€/.test(x); })[0] || "").trim().slice(0, 120),
+        var dpe = (txt.match(/(?:DPE|énergie)\s*:?\s*([A-G])\b/i) || txt.match(/^\s*([A-G])\s*$/m) || [])[1];
+        var img = null, aire = 0;
+        [].slice.call(c.querySelectorAll("img")).forEach(function(x){ var b = x.getBoundingClientRect(), s2 = b.width * b.height; if(b.width >= 100 && s2 > aire){ aire = s2; img = x; } });
+        var src = img ? (img.currentSrc || img.getAttribute("data-src") || img.src || "") : "";
+        ajoute({ u:a.href.split(/[?#]/)[0], t:"",
           p:prix, s:s && num(s), r:r && +r, k:/maison|villa/i.test(txt) ? "Maison" : "Appartement", v:ville, z:cp, d:dpe, i:/^https?:/.test(src) ? src : "" });
       } catch(e){}
     });
@@ -1351,7 +1356,7 @@ function codeFavori(){
     "try{var A=" + JSON.stringify(appUrl()) + ";" +
     "var envoyer=function(cle,o,txt){var s=btoa(unescape(encodeURIComponent(JSON.stringify(o))));var w=window.open(A+'#'+cle+'='+s,'rendement');if(w)M.textContent=txt;else location.href=A+'#'+cle+'='+s};" +
     // page de résultats (pas d'identifiant d'annonce dans l'adresse) : toutes les annonces affichées
-    "var L=/\\d{6,}/.test(location.pathname)?[]:" + fn(lireListePage) + ";" +
+    "var L=" + fn(lireListePage) + ";" +
     "if(L.length>=2){envoyer('liste',{u:location.href,h:location.hostname,l:L},'→ Rendement : '+L.length+' annonces envoyées');return}" +
     "var d={u:location.href.split('#')[0].split('?')[0],h:location.hostname,t:document.title};" +
     "try{var n=document.getElementById('__NEXT_DATA__');if(n){var j=JSON.parse(n.textContent),a=j&&j.props&&j.props.pageProps&&j.props.pageProps.ad;" +
@@ -2220,7 +2225,7 @@ function recevoirListe(d){
 function bienDeListe(x){
   return nouveauBien({ url:x.url, source:sourceDe(x.url), type:x.type, prix:x.prix, surface:x.surface, pieces:x.pieces, ville:x.ville, cp:x.cp, dpe:x.dpe,
     lat:x.lat, lng:x.lng, posApprox:!!x.lat, photos: x.photo ? [x.photo] : [], vignette:x.photo,
-    titre: x.titre || [x.type === "maison" ? "Maison" : "Appartement", x.surface ? fmtN(x.surface) + " m²" : "", x.ville].filter(Boolean).join(" · ") });
+    titre: x.titre || [x.type === "maison" ? "Maison" : "Appartement", x.pieces ? (x.pieces === 1 ? "studio" : x.pieces + " pièces") : "", x.surface ? fmtN(x.surface, 1).replace(/,0$/, "") + " m²" : ""].filter(Boolean).join(" · ") });
 }
 let triVilles = false, triVillesFait = 0;
 async function assurerVillesTri(items, date){
@@ -2257,7 +2262,7 @@ function rendreTri(){
     h += '<div class="carte bien" style="cursor:default">' +
       (x.photo ? '<div class="tri-ph"><img loading="lazy" ' + imgAttr(x.photo) + '>' + pas + '</div>' : pas) +
       '<div class="inf"><div class="t">' + esc(b.titre) + '</div>' +
-      '<div class="s">' + esc([x.ville, x.prix ? eur(x.prix) : "", x.surface ? fmtN(x.surface) + " m²" : "", x.dpe ? "DPE " + x.dpe : ""].filter(Boolean).join(" · ")) + '</div>' +
+      '<div class="s">' + esc([x.ville, x.prix ? eur(x.prix) : "", x.surface && !/m²/.test(b.titre) ? fmtN(x.surface) + " m²" : "", x.dpe ? "DPE " + x.dpe : ""].filter(Boolean).join(" · ")) + '</div>' +
       (o.ok ? '<div class="k"><span>Brut <b>' + pct(o.brut) + '</b></span>' + (o.ecartPrix != null ? '<span>m² <b>' + (o.ecartPrix >= 0 ? "+" : "−") + pct(Math.abs(o.ecartPrix), 0) + '</b></span>' : "") +
         '<span>CF <b>' + sgn(o.cfNet) + '</b></span></div>' : '<div class="k note">Prix ou surface absent de la page</div>') + '</div>' +
       '<div class="tri-act">' + (deja ? '<button class="btn petit" data-act="ouvrir" data-id="' + deja.id + '" title="Déjà dans tes biens : voir la fiche">✓</button>'
